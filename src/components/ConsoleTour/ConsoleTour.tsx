@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useBootSequence } from './hooks/useBootSequence'
 import { useTerminalAnimation, SCANLINE_POSITIONS } from './hooks/useTerminalAnimation'
@@ -32,16 +32,13 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     if (!isActive) setUserLines([])
   }, [isActive])
 
-  // ESC always closes — ref avoids listener churn during re-renders
-  const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
-
+  // ESC always closes
   useEffect(() => {
     if (!isActive) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseRef.current() }
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [isActive])
+  }, [isActive, onClose])
 
   const handleInput = useCallback((input: string) => {
     const echo: DisplayLine = { id: uid(), type: 'user', text: input }
