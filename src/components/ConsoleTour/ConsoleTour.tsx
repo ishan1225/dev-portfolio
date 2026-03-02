@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useBootSequence } from './hooks/useBootSequence'
+import { useCommands } from './hooks/useCommands'
+import { useCommandHistory } from './hooks/useCommandHistory'
 import { useTerminalAnimation, SCANLINE_POSITIONS } from './hooks/useTerminalAnimation'
 import { TerminalHeader } from './TerminalHeader'
 import { TerminalProgress } from './TerminalProgress'
@@ -24,13 +26,20 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
 
   // Boot sequence starts only after the open animation completes
   const { lines: bootLines, isBooting, progress } = useBootSequence(isFullyOpen)
+  const { execute } = useCommands()
+  const { push: historyPush, up: historyUp, down: historyDown, reset: historyReset } = useCommandHistory()
 
   const [userLines, setUserLines] = useState<DisplayLine[]>([])
+  const [showBootLines, setShowBootLines] = useState(true)
 
-  // Reset user lines when terminal goes idle
+  // Reset state when terminal goes idle
   useEffect(() => {
-    if (!isActive) setUserLines([])
-  }, [isActive])
+    if (!isActive) {
+      setUserLines([])
+      setShowBootLines(true)
+      historyReset()
+    }
+  }, [isActive, historyReset])
 
   // ESC always closes
   useEffect(() => {
@@ -40,31 +49,50 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     return () => window.removeEventListener('keydown', handler)
   }, [isActive, onClose])
 
+  const mode: Mode = isBooting ? 'boot' : 'guided'
+
   const handleInput = useCallback((input: string) => {
+    historyPush(input)
     const echo: DisplayLine = { id: uid(), type: 'user', text: input }
+
     if (isBooting) {
       const reply: DisplayLine = { id: uid(), type: 'system', text: 'booting\u2026 one moment.' }
       setUserLines(prev => [...prev, echo, reply])
-    } else {
-      setUserLines(prev => [...prev, echo])
+      return
     }
-  }, [isBooting])
+
+    const ctx = { mode, currentStep: 0, totalSteps: 5 }
+    const result = execute(input, ctx)
+
+    if (result.sideEffect === 'clear') {
+      setShowBootLines(false)
+      setUserLines([])
+      return
+    }
+    if (result.sideEffect === 'exit') {
+      onClose()
+      return
+    }
+
+    setUserLines(prev => [...prev, echo, ...result.lines])
+  }, [isBooting, mode, execute, historyPush, onClose])
 
   const lastTypingIdx = bootLines.reduce(
     (acc, l, i) => (l.revealedChars < l.fullText.length ? i : acc), -1
   )
 
   const displayLines: DisplayLine[] = [
-    ...bootLines.map((l, i) => ({
-      id: l.id,
-      type: l.type,
-      text: l.fullText.slice(0, l.revealedChars),
-      showCursor: i === lastTypingIdx,
-    })),
+    ...(showBootLines
+      ? bootLines.map((l, i) => ({
+          id: l.id,
+          type: l.type,
+          text: l.fullText.slice(0, l.revealedChars),
+          showCursor: i === lastTypingIdx,
+        }))
+      : []),
     ...userLines,
   ]
 
-  const mode: Mode = isBooting ? 'boot' : 'guided'
   const displayProgress = isBooting ? progress : 1 / 5
   const progressLabel = isBooting ? 'BOOT' : '1/5'
 
@@ -111,7 +139,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                 label={progressLabel}
               />
               <TerminalBody lines={displayLines} />
-              <TerminalInput mode={mode} hint="next" onSubmit={handleInput} shouldFocus={isFullyOpen} />
+              <TerminalInput mode={mode} hint="help" onSubmit={handleInput} shouldFocus={isFullyOpen} onArrowUp={historyUp} onArrowDown={historyDown} />
               <TerminalFooter />
             </div>
           </motion.div>

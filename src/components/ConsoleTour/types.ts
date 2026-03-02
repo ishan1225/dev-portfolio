@@ -23,3 +23,21 @@ export interface BootStoryEntry {
   /** ms from boot start when this line begins printing */
   delay: number
 }
+
+export interface CommandResult {
+  lines: DisplayLine[]
+  sideEffect?: 'clear' | 'exit'
+}
+
+export interface CommandContext {
+  mode: Mode
+  currentStep: number
+  totalSteps: number
+}
+
+export interface CommandDef {
+  name: string
+  description: string
+  visible: boolean
+  execute: (args: string, ctx: CommandContext) => CommandResult
+}
