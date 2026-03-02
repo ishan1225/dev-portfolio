@@ -1,0 +1,25 @@
+export type LineType = 'system' | 'content' | 'hint' | 'user' | 'error'
+
+export type Mode = 'boot' | 'guided'
+
+/** A fully-resolved line ready for rendering in TerminalBody */
+export interface DisplayLine {
+  id: string
+  type: LineType
+  text: string
+  showCursor?: boolean
+}
+
+export interface BootLine {
+  id: string
+  type: LineType
+  fullText: string
+  revealedChars: number
+}
+
+export interface BootStoryEntry {
+  type: LineType
+  text: string
+  /** ms from boot start when this line begins printing */
+  delay: number
+}
