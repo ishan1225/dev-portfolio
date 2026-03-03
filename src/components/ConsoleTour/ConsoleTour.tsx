@@ -1,14 +1,18 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useBootSequence } from './hooks/useBootSequence'
 import { useCommands } from './hooks/useCommands'
 import { useCommandHistory } from './hooks/useCommandHistory'
+import { useGuidedFlow } from './hooks/useGuidedFlow'
+import { useTypewriterQueue } from './hooks/useTypewriterQueue'
 import { useTerminalAnimation, SCANLINE_POSITIONS } from './hooks/useTerminalAnimation'
 import { TerminalHeader } from './TerminalHeader'
 import { TerminalProgress } from './TerminalProgress'
 import { TerminalBody } from './TerminalBody'
 import { TerminalInput } from './TerminalInput'
 import { TerminalFooter } from './TerminalFooter'
+import { bootStory } from './data/bootStory'
+import { CONTACT_EMAIL } from './data/steps'
 import { TIMING } from './constants'
 import type { DisplayLine, Mode } from './types'
 
@@ -24,22 +28,52 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
   const { phase, termCtrl, backdropCtrl, isActive, isFullyOpen, isClosingVisual } =
     useTerminalAnimation(isOpen)
 
-  // Boot sequence starts only after the open animation completes
-  const { lines: bootLines, isBooting, progress } = useBootSequence(isFullyOpen)
+  const { isBooting, progress } = useBootSequence(isFullyOpen)
   const { execute } = useCommands()
   const { push: historyPush, up: historyUp, down: historyDown, reset: historyReset } = useCommandHistory()
 
-  const [userLines, setUserLines] = useState<DisplayLine[]>([])
-  const [showBootLines, setShowBootLines] = useState(true)
+  const isGuided = !isBooting && isFullyOpen
+  const guidedFlow = useGuidedFlow(isGuided)
+  const queue = useTypewriterQueue()
 
-  // Reset state when terminal goes idle
+  const bootEnqueuedRef = useRef(false)
+  const [pendingAutoExit, setPendingAutoExit] = useState(false)
+
+  // Enqueue boot lines when terminal fully opens
+  useEffect(() => {
+    if (isFullyOpen && !bootEnqueuedRef.current) {
+      bootEnqueuedRef.current = true
+      const lines: DisplayLine[] = bootStory.map((entry, i) => ({
+        id: `boot-${i}`,
+        type: entry.type,
+        text: entry.text,
+      }))
+      queue.enqueue(lines)
+    }
+  }, [isFullyOpen, queue.enqueue])
+
+  // Reset all state when terminal goes idle
   useEffect(() => {
     if (!isActive) {
-      setUserLines([])
-      setShowBootLines(true)
+      queue.clear()
       historyReset()
+      guidedFlow.reset()
+      bootEnqueuedRef.current = false
+      setPendingAutoExit(false)
     }
-  }, [isActive, historyReset])
+  }, [isActive, queue.clear, historyReset, guidedFlow.reset])
+
+  // Mark pending auto-exit when tour completes
+  useEffect(() => {
+    if (guidedFlow.isComplete) setPendingAutoExit(true)
+  }, [guidedFlow.isComplete])
+
+  // Auto-exit after outro finishes typing
+  useEffect(() => {
+    if (!pendingAutoExit || queue.isTyping) return
+    const timer = setTimeout(onClose, 3000)
+    return () => clearTimeout(timer)
+  }, [pendingAutoExit, queue.isTyping, onClose])
 
   // ESC always closes
   useEffect(() => {
@@ -51,50 +85,53 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
 
   const mode: Mode = isBooting ? 'boot' : 'guided'
 
+  const handleNavigate = useCallback((targetStep: number) => {
+    setPendingAutoExit(false)
+    queue.clear()
+    const introLines = guidedFlow.navigateToStep(targetStep)
+    queue.enqueue(introLines)
+  }, [queue.clear, queue.enqueue, guidedFlow.navigateToStep])
+
   const handleInput = useCallback((input: string) => {
+    setPendingAutoExit(false)
     historyPush(input)
     const echo: DisplayLine = { id: uid(), type: 'user', text: input }
 
     if (isBooting) {
-      const reply: DisplayLine = { id: uid(), type: 'system', text: 'booting\u2026 one moment.' }
-      setUserLines(prev => [...prev, echo, reply])
+      queue.enqueue([echo, { id: uid(), type: 'system', text: 'booting\u2026 one moment.' }])
       return
     }
 
-    const ctx = { mode, currentStep: 0, totalSteps: 5 }
+    const ctx = { mode, currentStep: guidedFlow.currentStep, totalSteps: guidedFlow.totalSteps }
     const result = execute(input, ctx)
 
     if (result.sideEffect === 'clear') {
-      setShowBootLines(false)
-      setUserLines([])
+      queue.clear()
       return
     }
     if (result.sideEffect === 'exit') {
       onClose()
       return
     }
+    if (result.sideEffect === 'navigate' && result.navigateTo != null) {
+      queue.clear()
+      const introLines = guidedFlow.navigateToStep(result.navigateTo)
+      queue.enqueue([echo, ...introLines])
+      return
+    }
+    if (result.sideEffect === 'copy-email') {
+      navigator.clipboard.writeText(CONTACT_EMAIL).then(
+        () => queue.enqueue([echo, { id: uid(), type: 'system', text: `\u2713 copied ${CONTACT_EMAIL} to clipboard` }]),
+        () => queue.enqueue([echo, { id: uid(), type: 'error', text: 'clipboard write failed \u2014 copy manually' }]),
+      )
+      return
+    }
 
-    setUserLines(prev => [...prev, echo, ...result.lines])
-  }, [isBooting, mode, execute, historyPush, onClose])
+    queue.enqueue([echo, ...result.lines])
+  }, [isBooting, mode, execute, historyPush, onClose, guidedFlow.currentStep, guidedFlow.totalSteps, guidedFlow.navigateToStep, queue.enqueue, queue.clear])
 
-  const lastTypingIdx = bootLines.reduce(
-    (acc, l, i) => (l.revealedChars < l.fullText.length ? i : acc), -1
-  )
-
-  const displayLines: DisplayLine[] = [
-    ...(showBootLines
-      ? bootLines.map((l, i) => ({
-          id: l.id,
-          type: l.type,
-          text: l.fullText.slice(0, l.revealedChars),
-          showCursor: i === lastTypingIdx,
-        }))
-      : []),
-    ...userLines,
-  ]
-
-  const displayProgress = isBooting ? progress : 1 / 5
-  const progressLabel = isBooting ? 'BOOT' : '1/5'
+  const displayProgress = isBooting ? progress : (guidedFlow.currentStep + 1) / guidedFlow.totalSteps
+  const progressLabel = isBooting ? 'BOOT' : `${guidedFlow.currentStep + 1}/${guidedFlow.totalSteps}`
 
   return (
     <>
@@ -135,11 +172,12 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
               <TerminalProgress
                 progress={displayProgress}
                 mode={mode}
-                currentStep={0}
+                currentStep={guidedFlow.currentStep}
                 label={progressLabel}
+                onTabClick={handleNavigate}
               />
-              <TerminalBody lines={displayLines} />
-              <TerminalInput mode={mode} hint="help" onSubmit={handleInput} shouldFocus={isFullyOpen} onArrowUp={historyUp} onArrowDown={historyDown} />
+              <TerminalBody lines={queue.displayLines} />
+              <TerminalInput mode={mode} hint={isGuided ? guidedFlow.stepHint : 'help'} onSubmit={handleInput} shouldFocus={isFullyOpen} onArrowUp={historyUp} onArrowDown={historyDown} />
               <TerminalFooter />
             </div>
           </motion.div>
