@@ -1,15 +1,15 @@
+import { STEPS } from './data/steps'
 import type { Mode } from './types'
-
-const TABS = ['About', 'Project 1', 'Project 2', 'Project 3', 'Contact']
 
 interface Props {
   progress: number  // 0–1
   mode: Mode
   currentStep: number  // 0–4
   label: string  // e.g. "BOOT" or "1/5"
+  onTabClick?: (index: number) => void
 }
 
-export function TerminalProgress({ progress, mode, currentStep, label }: Props) {
+export function TerminalProgress({ progress, mode, currentStep, label, onTabClick }: Props) {
   const isBooting = mode === 'boot'
 
   return (
@@ -28,12 +28,13 @@ export function TerminalProgress({ progress, mode, currentStep, label }: Props) 
 
       {/* Step tabs */}
       <div className="flex gap-1 lg:gap-1.5 flex-wrap">
-        {TABS.map((tab, i) => {
+        {STEPS.map((step, i) => {
           const isActive = !isBooting && i === currentStep
           return (
             <button
-              key={tab}
+              key={step.id}
               disabled={isBooting}
+              onClick={() => !isBooting && onTabClick?.(i)}
               className={[
                 'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold border-0 font-mono transition-all duration-300',
                 isBooting
@@ -43,7 +44,7 @@ export function TerminalProgress({ progress, mode, currentStep, label }: Props) 
                     : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white',
               ].join(' ')}
             >
-              {tab}
+              {step.tabLabel}
             </button>
           )
         })}

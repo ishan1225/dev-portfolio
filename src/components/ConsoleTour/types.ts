@@ -24,9 +24,19 @@ export interface BootStoryEntry {
   delay: number
 }
 
+export interface StepDef {
+  id: string
+  title: string
+  tabLabel: string
+  description: string[]
+  hint: string
+  impact?: string[]
+}
+
 export interface CommandResult {
   lines: DisplayLine[]
-  sideEffect?: 'clear' | 'exit'
+  sideEffect?: 'clear' | 'exit' | 'navigate' | 'copy-email'
+  navigateTo?: number
 }
 
 export interface CommandContext {
