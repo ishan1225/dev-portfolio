@@ -14,6 +14,13 @@ export function useCommands() {
 
   const execute = (rawInput: string, ctx: CommandContext): CommandResult => {
     const trimmed = rawInput.toLowerCase().trim()
+
+    // Try full input first (multi-word commands like "copy email")
+    if (map.has(trimmed)) {
+      return map.get(trimmed)!.execute('', ctx)
+    }
+
+    // Fall back to first-word match
     const spaceIdx = trimmed.indexOf(' ')
     const name = spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx)
     const args = spaceIdx === -1 ? '' : trimmed.slice(spaceIdx + 1).trim()
