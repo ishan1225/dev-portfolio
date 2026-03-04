@@ -283,7 +283,17 @@ Each step has a suggested command shown as ghost text:
 - [ ] Completion celebration: `✓ tour complete — 2:14`
 - [ ] `copy email` command in Contact step
 
-### Stage 4: Easter Eggs + Polish
+### Stage 4: Landing Page
+- [ ] Full scrollable portfolio page (hero, about, skills, projects, experience, contact)
+- [ ] Data-driven content from `src/data/portfolio.ts`
+- [ ] Responsive layout with Tailwind breakpoints (`sm:` = 640px)
+- [ ] Expandable project rows (green `border-l`) and experience rows (cyan `border-l`)
+- [ ] AnimatePresence expand/collapse animations
+- [ ] Mobile sticky bottom bar with action buttons
+- [ ] Click-to-copy email with "copied!" feedback
+- [ ] "show N more" toggle for desktop projects
+
+### Stage 5: Easter Eggs + Polish
 - [ ] Hidden commands: `skills`, `skills -a`, `sudo hire me`, `history`, `coffee`
 - [ ] `theme matrix` effect
 - [ ] `help -v` reveals hidden commands
