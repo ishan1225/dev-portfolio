@@ -1,5 +1,6 @@
 import type { CommandDef } from '../types'
 import { STEPS, TOTAL_STEPS, resolveStepArg } from './steps'
+import { SKILL_GROUPS } from '../../../data/portfolio'
 
 let lineCounter = 0
 const uid = () => `cmd-${++lineCounter}`
@@ -118,11 +119,11 @@ export const commands: CommandDef[] = [
     execute: () => ({
       lines: [
         { id: uid(), type: 'content', text: '── SKILLS ──' },
-        { id: uid(), type: 'content', text: 'Languages  — TypeScript, Go, Python, Rust' },
-        { id: uid(), type: 'content', text: 'Frontend   — React, Next.js, Tailwind, Framer Motion' },
-        { id: uid(), type: 'content', text: 'Backend    — Node, Express, PostgreSQL, Redis' },
-        { id: uid(), type: 'content', text: 'Infra      — AWS, Terraform, Docker, GitHub Actions' },
-        { id: uid(), type: 'content', text: 'Tools      — Figma, Storybook, Vite, Turborepo' },
+        ...SKILL_GROUPS.map(g => ({
+          id: uid(),
+          type: 'content' as const,
+          text: `${g.label.padEnd(10)} — ${g.items.join(', ')}`,
+        })),
       ],
     }),
   },
