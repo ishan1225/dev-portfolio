@@ -13,6 +13,8 @@
   --color-cyan:          #85EBD9;
   --color-amber:         #FFB366;
   --color-near-white:    #E8E8F0;
+  --color-bright-silver: #D4D4E0;
+  --color-teal-accent:   #3D898D;
 
   /* Monospace font stack */
   --font-mono: 'JetBrains Mono', 'IBM Plex Mono', 'Courier New', monospace;
@@ -46,4 +48,13 @@ body {
 
 .input-glow {
   animation: glow-breathe 3s ease-in-out infinite;
+}
+
+@keyframes btn-glow {
+  0%, 100% { box-shadow: 0 0 12px rgba(101, 220, 152, 0.15), 0 0 4px rgba(101, 220, 152, 0.1); }
+  50%      { box-shadow: 0 0 24px rgba(101, 220, 152, 0.3), 0 0 8px rgba(101, 220, 152, 0.2); }
+}
+
+.btn-glow {
+  animation: btn-glow 2.5s ease-in-out infinite;
 }
