@@ -1,180 +1,137 @@
-import type { CommandDef } from '../types'
-import { STEPS, TOTAL_STEPS, resolveStepArg } from './steps'
+import type { CommandDef, DisplayLine } from '../types'
+import {
+  PROJECTS, ABOUT_TOUR, CONTACT_TOUR,
+  SKILL_GROUPS, EXPERIENCE, SOCIAL_LINKS, LOCATION,
+} from '../../../data/portfolio'
 
 let lineCounter = 0
 const uid = () => `cmd-${++lineCounter}`
 
 export const commands: CommandDef[] = [
   {
-    name: 'help',
-    description: 'List available commands',
-    visible: true,
-    execute: (_args, _ctx) => {
-      const names = commands.filter(c => c.visible).map(c => c.name)
-      return {
-        lines: [{ id: uid(), type: 'system', text: `commands: ${names.join(', ')}` }],
-      }
-    },
-  },
-  {
-    name: 'clear',
-    description: 'Clear the terminal',
-    visible: true,
-    execute: () => ({
-      lines: [],
-      sideEffect: 'clear',
-    }),
-  },
-  {
-    name: 'exit',
-    description: 'Close the terminal',
-    visible: true,
-    execute: () => ({
-      lines: [],
-      sideEffect: 'exit',
-    }),
-  },
-  {
-    name: 'next',
-    description: 'Go to next step',
-    visible: true,
-    execute: (_args, ctx) => {
-      if (ctx.currentStep >= ctx.totalSteps - 1) {
-        return { lines: [{ id: uid(), type: 'system', text: 'already at last step.' }] }
-      }
-      return { lines: [], sideEffect: 'navigate', navigateTo: ctx.currentStep + 1 }
-    },
-  },
-  {
-    name: 'back',
-    description: 'Go to previous step',
-    visible: true,
-    execute: (_args, ctx) => {
-      if (ctx.currentStep <= 0) {
-        return { lines: [{ id: uid(), type: 'system', text: 'already at first step.' }] }
-      }
-      return { lines: [], sideEffect: 'navigate', navigateTo: ctx.currentStep - 1 }
-    },
-  },
-  {
-    name: 'open',
-    description: 'Open project N (1–3)',
-    visible: true,
-    execute: (args, _ctx) => {
-      const n = parseInt(args, 10)
-      if (isNaN(n) || n < 1 || n > 3) {
-        return { lines: [{ id: uid(), type: 'error', text: 'usage: open 1|2|3' }] }
-      }
-      return { lines: [], sideEffect: 'navigate', navigateTo: n }
-    },
-  },
-  {
     name: 'about',
-    description: 'Go to About',
-    visible: true,
-    execute: () => ({
-      lines: [],
-      sideEffect: 'navigate',
-      navigateTo: 0,
-    }),
-  },
-  {
-    name: 'contact',
-    description: 'Go to Contact',
-    visible: true,
-    execute: () => ({
-      lines: [],
-      sideEffect: 'navigate',
-      navigateTo: TOTAL_STEPS - 1,
-    }),
-  },
-  {
-    name: 'project',
-    description: 'Open project N (1–3)',
-    visible: true,
-    execute: (args, _ctx) => {
-      const n = parseInt(args, 10)
-      if (isNaN(n) || n < 1 || n > 3) {
-        return { lines: [{ id: uid(), type: 'error', text: 'usage: project 1|2|3' }] }
-      }
-      return { lines: [], sideEffect: 'navigate', navigateTo: n }
-    },
-  },
-  {
-    name: 'copy email',
-    description: 'Copy email to clipboard',
-    visible: true,
-    execute: (_args, ctx) => {
-      if (ctx.currentStep !== TOTAL_STEPS - 1) {
-        return { lines: [{ id: uid(), type: 'system', text: 'navigate to Contact first.' }] }
-      }
-      return { lines: [], sideEffect: 'copy-email' }
-    },
-  },
-  {
-    name: 'skills',
-    description: 'Show tech stack',
+    description: 'Introduction and skills',
     visible: true,
     execute: () => ({
       lines: [
-        { id: uid(), type: 'content', text: '── SKILLS ──' },
-        { id: uid(), type: 'content', text: 'Languages  — TypeScript, Go, Python, Rust' },
-        { id: uid(), type: 'content', text: 'Frontend   — React, Next.js, Tailwind, Framer Motion' },
-        { id: uid(), type: 'content', text: 'Backend    — Node, Express, PostgreSQL, Redis' },
-        { id: uid(), type: 'content', text: 'Infra      — AWS, Terraform, Docker, GitHub Actions' },
-        { id: uid(), type: 'content', text: 'Tools      — Figma, Storybook, Vite, Turborepo' },
+        { id: uid(), type: 'header', text: '── ABOUT ──' },
+        ...ABOUT_TOUR.narrative.map(t => ({ id: uid(), type: 'content' as const, text: t })),
+        { id: uid(), type: 'content', text: '' },
+        ...SKILL_GROUPS.map(g => ({
+          id: uid(), type: 'content' as const,
+          text: `${g.label.padEnd(10)} — ${g.items.join(', ')}`,
+        })),
       ],
     }),
   },
   {
-    name: 'impact',
-    description: 'Show impact metrics',
+    name: 'experience',
+    description: 'Work history',
     visible: true,
-    execute: (args, ctx) => {
-      const a = args.trim().toLowerCase().replace(/\s+/g, '')
-
-      // impact --all / -all / -a → every step
-      if (a === '--all' || a === '-all' || a === '-a') {
-        const lines = STEPS.flatMap(step => {
-          if (!step.impact?.length) return []
-          return [
-            { id: uid(), type: 'content' as const, text: `── IMPACT: ${step.title} ──` },
-            ...step.impact.map(l => ({ id: uid(), type: 'content' as const, text: `• ${l}` })),
-            { id: uid(), type: 'content' as const, text: '' },
-          ]
-        })
-        return { lines }
+    execute: () => ({
+      lines: [
+        { id: uid(), type: 'header', text: '── EXPERIENCE ──' },
+        ...EXPERIENCE.flatMap(e => [
+          { id: uid(), type: 'content' as const, text: `${e.role} · ${e.company} · ${e.year}` },
+          { id: uid(), type: 'content' as const, text: `  ${e.brief}` },
+          { id: uid(), type: 'content' as const, text: '' },
+        ]),
+      ],
+    }),
+  },
+  {
+    name: 'projects',
+    description: 'All projects overview',
+    visible: true,
+    execute: () => ({
+      lines: [
+        { id: uid(), type: 'header', text: '── PROJECTS ──' },
+        ...PROJECTS.map((p, i) => ({
+          id: uid(), type: 'content' as const,
+          text: `${i + 1}. ${p.title} [${p.impactBadge}] — ${p.desc}`,
+        })),
+      ],
+    }),
+  },
+  {
+    name: 'project',
+    description: 'Project details',
+    visible: true,
+    execute: (args) => {
+      const n = parseInt(args, 10)
+      if (isNaN(n) || n < 1 || n > PROJECTS.length) {
+        return { lines: [{ id: uid(), type: 'error', text: `usage: project 1–${PROJECTS.length}` }] }
       }
-
-      // impact <step-name> → specific step
-      if (a) {
-        const idx = resolveStepArg(a)
-        if (idx === -1) {
-          return { lines: [{ id: uid(), type: 'error', text: 'usage: impact [--all | about | project1 | contact]' }] }
-        }
-        const step = STEPS[idx]
-        if (!step.impact?.length) {
-          return { lines: [{ id: uid(), type: 'system', text: `no impact data for ${step.title}.` }] }
-        }
-        return {
-          lines: [
-            { id: uid(), type: 'content', text: `── IMPACT: ${step.title} ──` },
-            ...step.impact.map(l => ({ id: uid(), type: 'content' as const, text: `• ${l}` })),
-          ],
-        }
-      }
-
-      // impact (no args) → current step
-      const step = STEPS[ctx.currentStep]
-      if (!step?.impact?.length) {
-        return { lines: [{ id: uid(), type: 'system', text: 'no impact data for this step.' }] }
-      }
-      return {
-        lines: [
-          { id: uid(), type: 'content', text: `── IMPACT: ${step.title} ──` },
-          ...step.impact.map(l => ({ id: uid(), type: 'content' as const, text: `• ${l}` })),
-        ],
-      }
+      const p = PROJECTS[n - 1]
+      const lines: DisplayLine[] = [
+        { id: uid(), type: 'header', text: `── ${p.title.toUpperCase()} ──` },
+        { id: uid(), type: 'content', text: p.desc },
+        { id: uid(), type: 'content', text: '' },
+        ...p.bullets.map(b => ({ id: uid(), type: 'content' as const, text: `• ${b}` })),
+        { id: uid(), type: 'content', text: '' },
+        ...p.impact.map(imp => ({ id: uid(), type: 'content' as const, text: `▸ ${imp}` })),
+      ]
+      return { lines }
     },
+  },
+  {
+    name: 'contact',
+    description: 'Contact info',
+    visible: true,
+    execute: () => ({
+      lines: [
+        { id: uid(), type: 'header', text: '── CONTACT ──' },
+        ...CONTACT_TOUR.narrative.map(t => ({ id: uid(), type: 'content' as const, text: t })),
+        { id: uid(), type: 'content', text: '' },
+        ...SOCIAL_LINKS.map(s => ({ id: uid(), type: 'content' as const, text: `${s.label}: ${s.href}` })),
+        { id: uid(), type: 'content', text: '' },
+        { id: uid(), type: 'content', text: LOCATION },
+      ],
+      sideEffect: 'copy-email',
+    }),
+  },
+  {
+    name: 'help',
+    description: 'Available commands',
+    visible: true,
+    execute: () => ({
+      lines: [
+        { id: uid(), type: 'header', text: '── COMMANDS ──' },
+        { id: uid(), type: 'content', text: 'about         Introduction and skills' },
+        { id: uid(), type: 'content', text: 'experience    Work history' },
+        { id: uid(), type: 'content', text: 'projects      All projects overview' },
+        { id: uid(), type: 'content', text: 'project <n>   Project details' },
+        { id: uid(), type: 'content', text: 'contact       Contact info' },
+        { id: uid(), type: 'content', text: 'help          This list' },
+      ],
+    }),
+  },
+  {
+    name: 'secret',
+    description: 'Easter egg',
+    visible: false,
+    execute: () => ({
+      lines: [
+        { id: uid(), type: 'header', text: '── ??? ──' },
+        { id: uid(), type: 'system', text: 'decrypting...' },
+        { id: uid(), type: 'content', text: 'matrix donut coming soon.' },
+      ],
+      sideEffect: 'glitch',
+      glitchIntensity: 0.7,
+    }),
+  },
+  {
+    name: 'fun',
+    description: 'Easter egg',
+    visible: false,
+    execute: () => ({
+      lines: [
+        { id: uid(), type: 'header', text: '── ??? ──' },
+        { id: uid(), type: 'system', text: 'initializing...' },
+        { id: uid(), type: 'content', text: 'game coming soon.' },
+      ],
+      sideEffect: 'glitch',
+      glitchIntensity: 0.5,
+    }),
   },
 ]

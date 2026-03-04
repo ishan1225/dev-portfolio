@@ -2,16 +2,24 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { TIMING } from '../constants'
 import type { DisplayLine } from '../types'
 
+interface QueueItem {
+  line: DisplayLine
+  mode: 'typewriter' | 'stagger'
+}
+
 /**
- * Universal typewriter queue — ALL terminal output flows through this.
- * Lines are typed one at a time, character by character.
- * User echo lines (type 'user') and empty lines appear instantly.
+ * Universal output queue — ALL terminal output flows through this.
+ * Supports two modes:
+ * - 'typewriter': per-character reveal (boot phase)
+ * - 'stagger': whole lines appear with delay between them (post-boot)
+ * User echo lines (type 'user') and empty lines always appear instantly.
  */
 export function useTypewriterQueue(
   charMs: number = TIMING.typewriterMs,
+  staggerMs: number = TIMING.lineStaggerMs,
   pauseMs: number = 100,
 ) {
-  const queueRef = useRef<DisplayLine[]>([])
+  const queueRef = useRef<QueueItem[]>([])
   const [completed, setCompleted] = useState<DisplayLine[]>([])
   const [typing, setTyping] = useState<{ line: DisplayLine; chars: number } | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -30,20 +38,32 @@ export function useTypewriterQueue(
       return
     }
 
-    const line = queueRef.current.shift()!
+    const item = queueRef.current.shift()!
+    const { line, mode } = item
 
     // User echoes and empty lines appear instantly
     if (line.type === 'user' || line.text.length === 0) {
       setCompleted(prev => [...prev, line])
       if (queueRef.current.length > 0) {
-        pauseRef.current = setTimeout(processNext, line.type === 'user' ? 0 : pauseMs)
+        pauseRef.current = setTimeout(processNext, line.type === 'user' ? 0 : staggerMs)
       } else {
         processingRef.current = false
       }
       return
     }
 
-    // Type line character by character
+    // Stagger mode: line appears whole instantly, then delay before next
+    if (mode === 'stagger') {
+      setCompleted(prev => [...prev, line])
+      if (queueRef.current.length > 0) {
+        pauseRef.current = setTimeout(processNext, staggerMs)
+      } else {
+        processingRef.current = false
+      }
+      return
+    }
+
+    // Typewriter mode: character by character
     let chars = 0
     setTyping({ line, chars: 0 })
 
@@ -63,11 +83,12 @@ export function useTypewriterQueue(
         setTyping({ line, chars })
       }
     }, charMs)
-  }, [charMs, pauseMs])
+  }, [charMs, staggerMs, pauseMs])
 
-  const enqueue = useCallback((lines: DisplayLine[]) => {
+  const enqueue = useCallback((lines: DisplayLine[], mode: 'typewriter' | 'stagger' = 'typewriter') => {
     if (lines.length === 0) return
-    queueRef.current.push(...lines)
+    const items = lines.map(line => ({ line, mode }))
+    queueRef.current.push(...items)
     if (!processingRef.current) {
       processingRef.current = true
       processNext()

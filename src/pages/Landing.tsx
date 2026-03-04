@@ -254,7 +254,7 @@ export function Landing() {
                   </span>
                   <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                     <span className="text-[10px] sm:text-xs font-semibold text-amber bg-amber/[0.06] border border-amber/[0.07] px-2.5 py-0.5 rounded-xl">
-                      {p.impact}
+                      {p.impactBadge}
                     </span>
                     <span className={`text-sm font-light transition-colors duration-200 ${expanded ? 'text-matrix-green' : 'text-muted-purple'}`}>
                       {expanded ? '\u2212' : '+'}
@@ -288,6 +288,20 @@ export function Landing() {
                             <span className="text-silver text-xs sm:text-sm leading-relaxed">{b}</span>
                           </div>
                         ))}
+
+                        {p.impact.length > 0 && (
+                          <div className="mt-3 pt-2.5 border-t border-deep-teal/15">
+                            <span className="text-[10px] sm:text-xs text-amber/70 tracking-[2px] font-semibold">IMPACT</span>
+                            <div className="mt-1.5">
+                              {p.impact.map((imp, j) => (
+                                <div key={j} className="flex gap-2 mb-1.5">
+                                  <span className="text-amber text-xs sm:text-sm shrink-0 mt-0.5">&#x25B8;</span>
+                                  <span className="text-silver text-xs sm:text-sm leading-relaxed">{imp}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         <div className="flex gap-3 mt-4">
                           <a onClick={(e) => e.stopPropagation()} href="#" className="px-4 py-1.5 rounded-md border border-matrix-green/35 text-xs sm:text-sm text-matrix-green font-semibold tracking-[1px] hover:bg-matrix-green/15 hover:border-matrix-green/60 transition-all duration-200">

@@ -1,9 +1,9 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useBootSequence } from './hooks/useBootSequence'
 import { useCommands } from './hooks/useCommands'
 import { useCommandHistory } from './hooks/useCommandHistory'
-import { useGuidedFlow } from './hooks/useGuidedFlow'
+import { useTourFlow } from './hooks/useTourFlow'
 import { useTypewriterQueue } from './hooks/useTypewriterQueue'
 import { useTerminalAnimation, SCANLINE_POSITIONS } from './hooks/useTerminalAnimation'
 import { TerminalHeader } from './TerminalHeader'
@@ -11,10 +11,11 @@ import { TerminalProgress } from './TerminalProgress'
 import { TerminalBody } from './TerminalBody'
 import { TerminalInput } from './TerminalInput'
 import { TerminalFooter } from './TerminalFooter'
+import { OnboardingOverlay } from './OnboardingOverlay'
 import { bootStory } from './data/bootStory'
-import { CONTACT_EMAIL } from './data/steps'
+import { CONTACT_EMAIL, resolveStepArg } from './data/steps'
 import { TIMING } from './constants'
-import type { DisplayLine, Mode } from './types'
+import type { DisplayLine } from './types'
 
 interface Props {
   isOpen: boolean
@@ -32,12 +33,21 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
   const { execute } = useCommands()
   const { push: historyPush, up: historyUp, down: historyDown, reset: historyReset } = useCommandHistory()
 
-  const isGuided = !isBooting && isFullyOpen
-  const guidedFlow = useGuidedFlow(isGuided)
-  const queue = useTypewriterQueue()
+  const tourEnabled = !isBooting && isFullyOpen
+  const {
+    currentStep, totalSteps, visibleTotal, ghostHint,
+    navigateToStep, handleEasterEgg,
+    easterEggRevealed, easterEggPhase, isComplete, hasInteracted, setHasInteracted,
+    reset: tourReset,
+  } = useTourFlow(tourEnabled)
 
+  const queue = useTypewriterQueue()
   const bootEnqueuedRef = useRef(false)
-  const [pendingAutoExit, setPendingAutoExit] = useState(false)
+
+  // Tutorial state: null=inactive, 0=continue, 1=tab+enter, 2=click-about, 3=farewell
+  const [tutorialStep, setTutorialStep] = useState<number | null>(null)
+  const tutorialStartedRef = useRef(false)
+  const pendingNavRef = useRef<number | null>(null)
 
   // Enqueue boot lines when terminal fully opens
   useEffect(() => {
@@ -48,32 +58,71 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
         type: entry.type,
         text: entry.text,
       }))
-      queue.enqueue(lines)
+      queue.enqueue(lines) // typewriter mode (default) for boot
     }
   }, [isFullyOpen, queue.enqueue])
+
+  // Start interactive tutorial after boot completes
+  useEffect(() => {
+    if (!isBooting && isFullyOpen && !tutorialStartedRef.current) {
+      tutorialStartedRef.current = true
+      setTutorialStep(0) // immediately — so label shows INTRO, no "0/5" flash
+    }
+  }, [isBooting, isFullyOpen])
+
+  // Clear boot text shortly after tutorial begins (separate effect for StrictMode compat)
+  useEffect(() => {
+    if (tutorialStep !== 0) return
+    const timer = setTimeout(() => {
+      queue.clear()
+    }, TIMING.onboardingDelayMs)
+    return () => clearTimeout(timer)
+  }, [tutorialStep, queue.clear])
+
+  // Farewell step 3: show message, then navigate, then dismiss
+  useEffect(() => {
+    if (tutorialStep !== 3) return
+    const stepIndex = pendingNavRef.current
+
+    // 1.8s: farewell visible on clean body
+    // 1.8s: load content underneath (overlay still visible)
+    // 2.5s: dismiss overlay — content revealed
+    const navTimer = setTimeout(() => {
+      if (stepIndex !== null) {
+        setHasInteracted(true)
+        const lines = navigateToStep(stepIndex)
+        queue.clear()
+        queue.enqueue(lines, 'stagger')
+        queue.enqueue([
+          { id: uid(), type: 'content', text: '' },
+          { id: uid(), type: 'system', text: 'tip: tabs, Continue ▸, and commands — all three work.' },
+        ], 'stagger')
+        pendingNavRef.current = null
+      }
+    }, 1800)
+
+    const dismissTimer = setTimeout(() => {
+      setTutorialStep(null)
+    }, 2500)
+
+    return () => {
+      clearTimeout(navTimer)
+      clearTimeout(dismissTimer)
+    }
+  }, [tutorialStep, navigateToStep, queue.clear, queue.enqueue, setHasInteracted])
 
   // Reset all state when terminal goes idle
   useEffect(() => {
     if (!isActive) {
       queue.clear()
       historyReset()
-      guidedFlow.reset()
+      tourReset()
       bootEnqueuedRef.current = false
-      setPendingAutoExit(false)
+      setTutorialStep(null)
+      tutorialStartedRef.current = false
+      pendingNavRef.current = null
     }
-  }, [isActive, queue.clear, historyReset, guidedFlow.reset])
-
-  // Mark pending auto-exit when tour completes
-  useEffect(() => {
-    if (guidedFlow.isComplete) setPendingAutoExit(true)
-  }, [guidedFlow.isComplete])
-
-  // Auto-exit after outro finishes typing
-  useEffect(() => {
-    if (!pendingAutoExit || queue.isTyping) return
-    const timer = setTimeout(onClose, 3000)
-    return () => clearTimeout(timer)
-  }, [pendingAutoExit, queue.isTyping, onClose])
+  }, [isActive, queue.clear, historyReset, tourReset])
 
   // ESC always closes
   useEffect(() => {
@@ -83,17 +132,49 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     return () => window.removeEventListener('keydown', handler)
   }, [isActive, onClose])
 
-  const mode: Mode = isBooting ? 'boot' : 'guided'
+  // Handle tab click → navigate to step directly
+  const handleTabClick = useCallback((stepIndex: number) => {
+    // Block tab clicks during tutorial steps 0 and 1
+    if (tutorialStep !== null && tutorialStep < 2) return
 
-  const handleNavigate = useCallback((targetStep: number) => {
-    setPendingAutoExit(false)
+    // Tutorial step 2: show farewell, then navigate after delay
+    if (tutorialStep === 2) {
+      setTutorialStep(3)
+      pendingNavRef.current = stepIndex
+      queue.clear() // clear step feedback so farewell message is clean
+      return
+    }
+
+    // Normal tab click
+    setHasInteracted(true)
+    const lines = navigateToStep(stepIndex)
     queue.clear()
-    const introLines = guidedFlow.navigateToStep(targetStep)
-    queue.enqueue(introLines)
-  }, [queue.clear, queue.enqueue, guidedFlow.navigateToStep])
+    queue.enqueue(lines, 'stagger')
 
+    // Contact step → copy email
+    if (stepIndex === totalSteps - 1) {
+      navigator.clipboard.writeText(CONTACT_EMAIL).then(
+        () => queue.enqueue([{ id: uid(), type: 'system', text: `\u2713 copied ${CONTACT_EMAIL}` }], 'stagger'),
+        () => {},
+      )
+    }
+  }, [tutorialStep, navigateToStep, totalSteps, queue.clear, queue.enqueue, setHasInteracted])
+
+  // Handle typed command input
   const handleInput = useCallback((input: string) => {
-    setPendingAutoExit(false)
+    // Tutorial step 1: intercept — don't navigate, just acknowledge
+    if (tutorialStep === 1) {
+      const echo: DisplayLine = { id: uid(), type: 'user', text: input }
+      queue.clear()
+      queue.enqueue([
+        echo,
+        { id: uid(), type: 'system', text: '✓ type commands to jump directly to any section.' },
+      ], 'stagger')
+      setTutorialStep(2)
+      return
+    }
+
+    setHasInteracted(true)
     historyPush(input)
     const echo: DisplayLine = { id: uid(), type: 'user', text: input }
 
@@ -102,40 +183,99 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       return
     }
 
-    const ctx = { mode, currentStep: guidedFlow.currentStep, totalSteps: guidedFlow.totalSteps }
+    const trimmed = input.toLowerCase().trim()
+
+    // Easter egg commands → handleEasterEgg for content + state
+    if (trimmed === 'secret' || trimmed === 'fun') {
+      const lines = handleEasterEgg(trimmed)
+      queue.clear()
+      queue.enqueue([echo, ...lines], 'stagger')
+      return
+    }
+
+    // Check if command maps to a tour step
+    const stepIdx = resolveStepArg(trimmed)
+    if (stepIdx >= 0) {
+      const lines = navigateToStep(stepIdx)
+      queue.clear()
+      queue.enqueue([echo, ...lines], 'stagger')
+
+      // Contact step → copy email
+      if (stepIdx === totalSteps - 1) {
+        navigator.clipboard.writeText(CONTACT_EMAIL).then(
+          () => queue.enqueue([{ id: uid(), type: 'system', text: `\u2713 copied ${CONTACT_EMAIL}` }], 'stagger'),
+          () => {},
+        )
+      }
+      return
+    }
+
+    // Regular command
+    const ctx = { currentStep, totalSteps }
     const result = execute(input, ctx)
 
-    if (result.sideEffect === 'clear') {
-      queue.clear()
-      return
-    }
-    if (result.sideEffect === 'exit') {
-      onClose()
-      return
-    }
-    if (result.sideEffect === 'navigate' && result.navigateTo != null) {
-      queue.clear()
-      const introLines = guidedFlow.navigateToStep(result.navigateTo)
-      queue.enqueue([echo, ...introLines])
-      return
-    }
+    queue.clear()
+    queue.enqueue([echo, ...result.lines], 'stagger')
+
+    // Handle side effects
     if (result.sideEffect === 'copy-email') {
       navigator.clipboard.writeText(CONTACT_EMAIL).then(
-        () => queue.enqueue([echo, { id: uid(), type: 'system', text: `\u2713 copied ${CONTACT_EMAIL} to clipboard` }]),
-        () => queue.enqueue([echo, { id: uid(), type: 'error', text: 'clipboard write failed \u2014 copy manually' }]),
+        () => queue.enqueue([{ id: uid(), type: 'system', text: `\u2713 copied ${CONTACT_EMAIL}` }], 'stagger'),
+        () => {},
       )
+    }
+  }, [tutorialStep, isBooting, execute, historyPush, handleEasterEgg, navigateToStep, currentStep, totalSteps, queue.enqueue, queue.clear, setHasInteracted])
+
+  // Handle [▸] play button
+  const handlePlayClick = () => {
+    // Tutorial step 0: acknowledge and advance
+    if (tutorialStep === 0) {
+      queue.clear()
+      queue.enqueue([
+        { id: uid(), type: 'system', text: '✓ Continue ▸ follows the guided tour step by step.' },
+      ], 'stagger')
+      setTutorialStep(1)
       return
     }
 
-    queue.enqueue([echo, ...result.lines])
-  }, [isBooting, mode, execute, historyPush, onClose, guidedFlow.currentStep, guidedFlow.totalSteps, guidedFlow.navigateToStep, queue.enqueue, queue.clear])
+    if (!ghostHint) return
+    handleInput(ghostHint)
+  }
 
-  const displayProgress = isBooting ? progress : (guidedFlow.currentStep + 1) / guidedFlow.totalSteps
-  const progressLabel = isBooting ? 'BOOT' : `${guidedFlow.currentStep + 1}/${guidedFlow.totalSteps}`
+  // Derive display values — tutorial overrides
+  const inTutorial = tutorialStep !== null && tutorialStep < 3
+  const shouldPulse = tourEnabled && !hasInteracted && tutorialStep === null
+  const effectiveGhostHint = tutorialStep === 1 ? 'about' : inTutorial ? '' : ghostHint
+
+  // Unified progress: boot(2) + intro(3) + tour(visibleTotal) segments — no resets
+  const BOOT_WEIGHT = 2
+  const INTRO_STEPS = 3
+  const totalSegments = BOOT_WEIGHT + INTRO_STEPS + visibleTotal
+  const atEasterEgg = easterEggPhase === 'secret' || easterEggPhase === 'done'
+  const inTutorialOrFarewell = tutorialStep !== null
+
+  const displayProgress = isBooting
+    ? progress * (BOOT_WEIGHT / totalSegments)
+    : inTutorial
+      ? (BOOT_WEIGHT + tutorialStep!) / totalSegments
+      : atEasterEgg || isComplete
+        ? 1
+        : currentStep >= 0
+          ? (BOOT_WEIGHT + INTRO_STEPS + currentStep + 1) / totalSegments
+          : (BOOT_WEIGHT + INTRO_STEPS) / totalSegments
+
+  // Simple phase labels — no numbers, progress bar tells the story
+  const progressLabel = isBooting
+    ? 'Boot'
+    : inTutorialOrFarewell
+      ? 'Intro'
+      : atEasterEgg || isComplete
+        ? 'Bonus'
+        : 'Tour'
 
   return (
     <>
-      {/* Backdrop — always in DOM, visibility toggled via CSS to avoid mount flash */}
+      {/* Backdrop */}
       <motion.div
         animate={backdropCtrl}
         className="fixed inset-0 bg-void/70 backdrop-blur-sm z-40 pointer-events-none"
@@ -168,18 +308,41 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
           >
             {/* Hide terminal chrome during compress/line/dot phases */}
             <div className="flex flex-col flex-1 min-h-0" style={{ opacity: phase === 'compress' || isClosingVisual ? 0 : 1 }}>
-              <TerminalHeader mode={mode} onClose={onClose} />
+              <TerminalHeader onClose={onClose} />
               <TerminalProgress
                 progress={displayProgress}
-                mode={mode}
-                currentStep={guidedFlow.currentStep}
                 label={progressLabel}
-                onTabClick={handleNavigate}
+                isBooting={isBooting}
+                currentStep={currentStep}
+                totalSteps={visibleTotal}
+                easterEggRevealed={easterEggRevealed}
+                easterEggPhase={easterEggPhase}
+                isComplete={isComplete}
+                shouldPulse={shouldPulse}
+                tutorialStep={tutorialStep}
+                onTabClick={handleTabClick}
+                onPlayClick={handlePlayClick}
               />
               <TerminalBody lines={queue.displayLines} />
-              <TerminalInput mode={mode} hint={isGuided ? guidedFlow.stepHint : 'help'} onSubmit={handleInput} shouldFocus={isFullyOpen} onArrowUp={historyUp} onArrowDown={historyDown} />
+              <TerminalInput
+                isBooting={isBooting}
+                hint={effectiveGhostHint}
+                onSubmit={handleInput}
+                shouldFocus={isFullyOpen && tutorialStep !== 0 && tutorialStep !== 2}
+                shouldPulse={shouldPulse}
+                disabled={tutorialStep === 0 || tutorialStep === 2}
+                onArrowUp={historyUp}
+                onArrowDown={historyDown}
+              />
               <TerminalFooter />
             </div>
+
+            {/* Tutorial callout overlay */}
+            <AnimatePresence>
+              {tutorialStep !== null && (
+                <OnboardingOverlay step={tutorialStep} />
+              )}
+            </AnimatePresence>
           </motion.div>
 
           {/* Scanlines overlay — open animation phase 2 */}

@@ -6,5 +6,5 @@ export const bootStory: BootStoryEntry[] = [
   { type: 'content', text: 'hello there.',                                   delay: 1800 },
   { type: 'content', text: 'you found something most people skip.',          delay: 2800 },
   { type: 'content', text: 'this is a guided tour of my work.',              delay: 3600 },
-  { type: 'hint',    text: 'boot complete. type next to begin.',              delay: 4400 },
+  { type: 'system',  text: 'boot complete.',                                   delay: 4400 },
 ]
