@@ -1,18 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
-import type { Mode } from './types'
 
 interface Props {
-  mode: Mode
+  isBooting: boolean
   hint?: string
   onSubmit: (value: string) => void
   shouldFocus?: boolean
+  shouldPulse?: boolean
   onArrowUp?: () => string | null
   onArrowDown?: () => string | null
 }
 
-export function TerminalInput({ mode, hint, onSubmit, shouldFocus, onArrowUp, onArrowDown }: Props) {
+export function TerminalInput({ isBooting, hint, onSubmit, shouldFocus, shouldPulse, onArrowUp, onArrowDown }: Props) {
   const [value, setValue] = useState('')
-  const isBooting = mode === 'boot'
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -42,7 +41,9 @@ export function TerminalInput({ mode, hint, onSubmit, shouldFocus, onArrowUp, on
 
   return (
     <div className="flex items-center gap-2 lg:gap-2.5 xl:gap-3 px-3.5 lg:px-5 xl:px-6 py-2 lg:py-2.5 xl:py-3 bg-deep-teal/20 border-t border-matrix-green/30 input-glow">
-      <span className="text-matrix-green font-bold text-base lg:text-lg xl:text-xl leading-none">›</span>
+      <span className={`text-matrix-green font-bold text-base lg:text-lg xl:text-xl leading-none ${shouldPulse ? 'prompt-pulse' : ''}`}>
+        ›
+      </span>
 
       <div className="flex-1 relative">
         {!value && (
@@ -60,6 +61,7 @@ export function TerminalInput({ mode, hint, onSubmit, shouldFocus, onArrowUp, on
           value={value}
           onChange={e => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
+          maxLength={40}
           className="w-full bg-transparent border-0 outline-none text-near-white text-sm lg:text-base caret-matrix-green font-mono"
         />
       </div>
