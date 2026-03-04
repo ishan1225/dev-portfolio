@@ -485,6 +485,7 @@ Final command list (8 commands):
 - [ ] Performance optimization
 - [ ] Animation timing fine-tuning
 - [ ] Cross-browser testing
+- [ ] Skip tutorial on return: persist `tutorialCompleted` to localStorage, skip the interactive intro for returning visitors (still show on first visit or when storage cleared)
 
 ## Suggested File Structure
 ```

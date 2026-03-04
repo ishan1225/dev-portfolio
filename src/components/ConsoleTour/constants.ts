@@ -26,6 +26,8 @@ export const TIMING = {
   lineStaggerMs:  80,
   /** ms before pulsing [▸] for first-time nudge */
   nudgeDelayMs:   3000,
+  /** ms after boot ends before tutorial starts */
+  onboardingDelayMs: 600,
 
   // Open animation — "signal acquisition"
   openFlash:      100,   // scale overshoot + fade in

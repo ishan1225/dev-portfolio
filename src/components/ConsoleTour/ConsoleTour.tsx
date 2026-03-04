@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useBootSequence } from './hooks/useBootSequence'
 import { useCommands } from './hooks/useCommands'
 import { useCommandHistory } from './hooks/useCommandHistory'
@@ -11,6 +11,7 @@ import { TerminalProgress } from './TerminalProgress'
 import { TerminalBody } from './TerminalBody'
 import { TerminalInput } from './TerminalInput'
 import { TerminalFooter } from './TerminalFooter'
+import { OnboardingOverlay } from './OnboardingOverlay'
 import { bootStory } from './data/bootStory'
 import { CONTACT_EMAIL, resolveStepArg } from './data/steps'
 import { TIMING } from './constants'
@@ -36,12 +37,17 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
   const {
     currentStep, totalSteps, visibleTotal, ghostHint,
     navigateToStep, handleEasterEgg,
-    easterEggRevealed, isComplete, hasInteracted, setHasInteracted,
+    easterEggRevealed, easterEggPhase, isComplete, hasInteracted, setHasInteracted,
     reset: tourReset,
   } = useTourFlow(tourEnabled)
 
   const queue = useTypewriterQueue()
   const bootEnqueuedRef = useRef(false)
+
+  // Tutorial state: null=inactive, 0=continue, 1=tab+enter, 2=click-about, 3=farewell
+  const [tutorialStep, setTutorialStep] = useState<number | null>(null)
+  const tutorialStartedRef = useRef(false)
+  const pendingNavRef = useRef<number | null>(null)
 
   // Enqueue boot lines when terminal fully opens
   useEffect(() => {
@@ -56,6 +62,55 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     }
   }, [isFullyOpen, queue.enqueue])
 
+  // Start interactive tutorial after boot completes
+  useEffect(() => {
+    if (!isBooting && isFullyOpen && !tutorialStartedRef.current) {
+      tutorialStartedRef.current = true
+      setTutorialStep(0) // immediately — so label shows INTRO, no "0/5" flash
+    }
+  }, [isBooting, isFullyOpen])
+
+  // Clear boot text shortly after tutorial begins (separate effect for StrictMode compat)
+  useEffect(() => {
+    if (tutorialStep !== 0) return
+    const timer = setTimeout(() => {
+      queue.clear()
+    }, TIMING.onboardingDelayMs)
+    return () => clearTimeout(timer)
+  }, [tutorialStep, queue.clear])
+
+  // Farewell step 3: show message, then navigate, then dismiss
+  useEffect(() => {
+    if (tutorialStep !== 3) return
+    const stepIndex = pendingNavRef.current
+
+    // 1.8s: farewell visible on clean body
+    // 1.8s: load content underneath (overlay still visible)
+    // 2.5s: dismiss overlay — content revealed
+    const navTimer = setTimeout(() => {
+      if (stepIndex !== null) {
+        setHasInteracted(true)
+        const lines = navigateToStep(stepIndex)
+        queue.clear()
+        queue.enqueue(lines, 'stagger')
+        queue.enqueue([
+          { id: uid(), type: 'content', text: '' },
+          { id: uid(), type: 'system', text: 'tip: tabs, Continue ▸, and commands — all three work.' },
+        ], 'stagger')
+        pendingNavRef.current = null
+      }
+    }, 1800)
+
+    const dismissTimer = setTimeout(() => {
+      setTutorialStep(null)
+    }, 2500)
+
+    return () => {
+      clearTimeout(navTimer)
+      clearTimeout(dismissTimer)
+    }
+  }, [tutorialStep, navigateToStep, queue.clear, queue.enqueue, setHasInteracted])
+
   // Reset all state when terminal goes idle
   useEffect(() => {
     if (!isActive) {
@@ -63,6 +118,9 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       historyReset()
       tourReset()
       bootEnqueuedRef.current = false
+      setTutorialStep(null)
+      tutorialStartedRef.current = false
+      pendingNavRef.current = null
     }
   }, [isActive, queue.clear, historyReset, tourReset])
 
@@ -76,6 +134,18 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
 
   // Handle tab click → navigate to step directly
   const handleTabClick = useCallback((stepIndex: number) => {
+    // Block tab clicks during tutorial steps 0 and 1
+    if (tutorialStep !== null && tutorialStep < 2) return
+
+    // Tutorial step 2: show farewell, then navigate after delay
+    if (tutorialStep === 2) {
+      setTutorialStep(3)
+      pendingNavRef.current = stepIndex
+      queue.clear() // clear step feedback so farewell message is clean
+      return
+    }
+
+    // Normal tab click
     setHasInteracted(true)
     const lines = navigateToStep(stepIndex)
     queue.clear()
@@ -88,10 +158,22 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
         () => {},
       )
     }
-  }, [navigateToStep, totalSteps, queue.clear, queue.enqueue, setHasInteracted])
+  }, [tutorialStep, navigateToStep, totalSteps, queue.clear, queue.enqueue, setHasInteracted])
 
   // Handle typed command input
   const handleInput = useCallback((input: string) => {
+    // Tutorial step 1: intercept — don't navigate, just acknowledge
+    if (tutorialStep === 1) {
+      const echo: DisplayLine = { id: uid(), type: 'user', text: input }
+      queue.clear()
+      queue.enqueue([
+        echo,
+        { id: uid(), type: 'system', text: '✓ type commands to jump directly to any section.' },
+      ], 'stagger')
+      setTutorialStep(2)
+      return
+    }
+
     setHasInteracted(true)
     historyPush(input)
     const echo: DisplayLine = { id: uid(), type: 'user', text: input }
@@ -142,28 +224,54 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
         () => {},
       )
     }
-  }, [isBooting, execute, historyPush, handleEasterEgg, navigateToStep, currentStep, totalSteps, queue.enqueue, queue.clear, setHasInteracted])
+  }, [tutorialStep, isBooting, execute, historyPush, handleEasterEgg, navigateToStep, currentStep, totalSteps, queue.enqueue, queue.clear, setHasInteracted])
 
-  // Handle [▸] play button → submit ghost hint as command
+  // Handle [▸] play button
   const handlePlayClick = () => {
+    // Tutorial step 0: acknowledge and advance
+    if (tutorialStep === 0) {
+      queue.clear()
+      queue.enqueue([
+        { id: uid(), type: 'system', text: '✓ Continue ▸ follows the guided tour step by step.' },
+      ], 'stagger')
+      setTutorialStep(1)
+      return
+    }
+
     if (!ghostHint) return
     handleInput(ghostHint)
   }
 
-  // Derive display values
-  const shouldPulse = tourEnabled && !hasInteracted
+  // Derive display values — tutorial overrides
+  const inTutorial = tutorialStep !== null && tutorialStep < 3
+  const shouldPulse = tourEnabled && !hasInteracted && tutorialStep === null
+  const effectiveGhostHint = tutorialStep === 1 ? 'about' : inTutorial ? '' : ghostHint
+
+  // Unified progress: boot(2) + intro(3) + tour(visibleTotal) segments — no resets
+  const BOOT_WEIGHT = 2
+  const INTRO_STEPS = 3
+  const totalSegments = BOOT_WEIGHT + INTRO_STEPS + visibleTotal
+  const atEasterEgg = easterEggPhase === 'secret' || easterEggPhase === 'done'
+  const inTutorialOrFarewell = tutorialStep !== null
 
   const displayProgress = isBooting
-    ? progress
-    : currentStep >= 0
-      ? (currentStep + 1) / visibleTotal
-      : 0
+    ? progress * (BOOT_WEIGHT / totalSegments)
+    : inTutorial
+      ? (BOOT_WEIGHT + tutorialStep!) / totalSegments
+      : atEasterEgg || isComplete
+        ? 1
+        : currentStep >= 0
+          ? (BOOT_WEIGHT + INTRO_STEPS + currentStep + 1) / totalSegments
+          : (BOOT_WEIGHT + INTRO_STEPS) / totalSegments
 
+  // Simple phase labels — no numbers, progress bar tells the story
   const progressLabel = isBooting
-    ? 'BOOT'
-    : currentStep >= 0
-      ? `${currentStep + 1}/${visibleTotal}`
-      : `0/${visibleTotal}`
+    ? 'Boot'
+    : inTutorialOrFarewell
+      ? 'Intro'
+      : atEasterEgg || isComplete
+        ? 'Bonus'
+        : 'Tour'
 
   return (
     <>
@@ -208,23 +316,33 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                 currentStep={currentStep}
                 totalSteps={visibleTotal}
                 easterEggRevealed={easterEggRevealed}
+                easterEggPhase={easterEggPhase}
                 isComplete={isComplete}
                 shouldPulse={shouldPulse}
+                tutorialStep={tutorialStep}
                 onTabClick={handleTabClick}
                 onPlayClick={handlePlayClick}
               />
               <TerminalBody lines={queue.displayLines} />
               <TerminalInput
                 isBooting={isBooting}
-                hint={ghostHint}
+                hint={effectiveGhostHint}
                 onSubmit={handleInput}
-                shouldFocus={isFullyOpen}
+                shouldFocus={isFullyOpen && tutorialStep !== 0 && tutorialStep !== 2}
                 shouldPulse={shouldPulse}
+                disabled={tutorialStep === 0 || tutorialStep === 2}
                 onArrowUp={historyUp}
                 onArrowDown={historyDown}
               />
               <TerminalFooter />
             </div>
+
+            {/* Tutorial callout overlay */}
+            <AnimatePresence>
+              {tutorialStep !== null && (
+                <OnboardingOverlay step={tutorialStep} />
+              )}
+            </AnimatePresence>
           </motion.div>
 
           {/* Scanlines overlay — open animation phase 2 */}
