@@ -28,7 +28,7 @@ export function useCommands() {
     const cmd = map.get(name)
     if (!cmd) {
       return {
-        lines: [{ id: uid(), type: 'error', text: 'unknown command. try: help' }],
+        lines: [{ id: uid(), type: 'error', text: 'unknown command \u2014 type help' }],
       }
     }
 

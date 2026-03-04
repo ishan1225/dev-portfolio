@@ -18,10 +18,14 @@ export const C = {
 } as const
 
 export const TIMING = {
-  /** ms per character for typewriter reveal */
+  /** ms per character for typewriter reveal (boot phase only) */
   typewriterMs:   30,
   /** total boot phase duration in ms */
   bootDurationMs: 5200,
+  /** ms between lines for post-boot content stagger */
+  lineStaggerMs:  80,
+  /** ms before pulsing [▸] for first-time nudge */
+  nudgeDelayMs:   3000,
 
   // Open animation — "signal acquisition"
   openFlash:      100,   // scale overshoot + fade in

@@ -1,6 +1,4 @@
-export type LineType = 'system' | 'content' | 'hint' | 'user' | 'error'
-
-export type Mode = 'boot' | 'guided'
+export type LineType = 'system' | 'content' | 'header' | 'user' | 'error'
 
 /** A fully-resolved line ready for rendering in TerminalBody */
 export interface DisplayLine {
@@ -24,23 +22,30 @@ export interface BootStoryEntry {
   delay: number
 }
 
+/** Configures which portfolio content appears in the tour and in what order */
+export interface TourStepConfig {
+  type: 'about' | 'project' | 'contact'
+  /** Index into PROJECTS array — only for type: 'project' */
+  index?: number
+}
+
 export interface StepDef {
   id: string
   title: string
   tabLabel: string
-  description: string[]
-  hint: string
-  impact?: string[]
+  /** Pre-built display lines (header + content) */
+  lines: DisplayLine[]
+  /** Real command shown as ghost hint to advance to next step */
+  ghostHint: string
 }
 
 export interface CommandResult {
   lines: DisplayLine[]
-  sideEffect?: 'clear' | 'exit' | 'navigate' | 'copy-email'
-  navigateTo?: number
+  sideEffect?: 'copy-email' | 'glitch'
+  glitchIntensity?: number
 }
 
 export interface CommandContext {
-  mode: Mode
   currentStep: number
   totalSteps: number
 }
