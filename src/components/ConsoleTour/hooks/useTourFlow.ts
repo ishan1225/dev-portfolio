@@ -47,11 +47,8 @@ export function useTourFlow(enabled: boolean) {
       setEasterEggPhase('secret')
       // Reveal easter egg tab if not already (user might type secret before reaching contact)
       if (!easterEggRevealed) setEasterEggRevealed(true)
-      return [
-        { id: uid(), type: 'header', text: '── ??? ──' },
-        { id: uid(), type: 'system', text: 'decrypting...' },
-        { id: uid(), type: 'content', text: 'matrix donut coming soon.' },
-      ]
+      // Lines handled by matrixMode in ConsoleTour — return empty
+      return []
     }
 
     if (command === 'fun') {

@@ -12,6 +12,7 @@ import { TerminalBody } from './TerminalBody'
 import { TerminalInput } from './TerminalInput'
 import { TerminalFooter } from './TerminalFooter'
 import { OnboardingOverlay } from './OnboardingOverlay'
+import { MatrixDonutRenderer } from './MatrixDonutRenderer'
 import { bootStory } from './data/bootStory'
 import { CONTACT_EMAIL, resolveStepArg } from './data/steps'
 import { TIMING } from './constants'
@@ -29,7 +30,11 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
   const { phase, termCtrl, backdropCtrl, isActive, isFullyOpen, isClosingVisual } =
     useTerminalAnimation(isOpen)
 
-  const { isBooting, progress } = useBootSequence(isFullyOpen)
+  // DEV: skip boot and go straight to matrix mode for debugging
+  const DEV_SKIP_TO_MATRIX = true
+  const bootResult = useBootSequence(DEV_SKIP_TO_MATRIX ? false : isFullyOpen)
+  const isBooting = DEV_SKIP_TO_MATRIX ? false : bootResult.isBooting
+  const progress = DEV_SKIP_TO_MATRIX ? 1 : bootResult.progress
   const { execute } = useCommands()
   const { push: historyPush, up: historyUp, down: historyDown, reset: historyReset } = useCommandHistory()
 
@@ -46,6 +51,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
 
   // Tutorial state: null=inactive, 0=continue, 1=tab+enter, 2=click-about, 3=farewell
   const [tutorialStep, setTutorialStep] = useState<number | null>(null)
+  const [matrixMode, setMatrixMode] = useState(false)
   const tutorialStartedRef = useRef(false)
   const pendingNavRef = useRef<number | null>(null)
 
@@ -53,6 +59,13 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
   useEffect(() => {
     if (isFullyOpen && !bootEnqueuedRef.current) {
       bootEnqueuedRef.current = true
+      if (DEV_SKIP_TO_MATRIX) {
+        // Skip boot + tutorial, go straight to matrix
+        handleEasterEgg('secret')
+        setMatrixMode(true)
+        tutorialStartedRef.current = true // prevent tutorial from starting
+        return
+      }
       const lines: DisplayLine[] = bootStory.map((entry, i) => ({
         id: `boot-${i}`,
         type: entry.type,
@@ -121,6 +134,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       setTutorialStep(null)
       tutorialStartedRef.current = false
       pendingNavRef.current = null
+      setMatrixMode(false)
     }
   }, [isActive, queue.clear, historyReset, tourReset])
 
@@ -186,8 +200,21 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     const trimmed = input.toLowerCase().trim()
 
     // Easter egg commands → handleEasterEgg for content + state
-    if (trimmed === 'secret' || trimmed === 'fun') {
-      const lines = handleEasterEgg(trimmed)
+    if (trimmed === 'secret') {
+      handleEasterEgg('secret')
+      setMatrixMode(true)
+      queue.clear()
+      queue.enqueue([echo], 'stagger')
+      return
+    }
+
+    // Dismiss matrix mode on any other input (including 'fun')
+    if (matrixMode) {
+      setMatrixMode(false)
+    }
+
+    if (trimmed === 'fun') {
+      const lines = handleEasterEgg('fun')
       queue.clear()
       queue.enqueue([echo, ...lines], 'stagger')
       return
@@ -323,7 +350,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                 onTabClick={handleTabClick}
                 onPlayClick={handlePlayClick}
               />
-              <TerminalBody lines={queue.displayLines} />
+              {matrixMode ? <MatrixDonutRenderer /> : <TerminalBody lines={queue.displayLines} />}
               <TerminalInput
                 isBooting={isBooting}
                 hint={effectiveGhostHint}
@@ -333,6 +360,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                 disabled={tutorialStep === 0 || tutorialStep === 2}
                 onArrowUp={historyUp}
                 onArrowDown={historyDown}
+                onTabFill={() => { if (matrixMode) setMatrixMode(false) }}
               />
               <TerminalFooter />
             </div>

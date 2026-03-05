@@ -9,9 +9,10 @@ interface Props {
   disabled?: boolean
   onArrowUp?: () => string | null
   onArrowDown?: () => string | null
+  onTabFill?: () => void
 }
 
-export function TerminalInput({ isBooting, hint, onSubmit, shouldFocus, shouldPulse, disabled, onArrowUp, onArrowDown }: Props) {
+export function TerminalInput({ isBooting, hint, onSubmit, shouldFocus, shouldPulse, disabled, onArrowUp, onArrowDown, onTabFill }: Props) {
   const [value, setValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -27,6 +28,7 @@ export function TerminalInput({ isBooting, hint, onSubmit, shouldFocus, shouldPu
     if (e.key === 'Tab' && hint && !value && !isBooting && !disabled) {
       e.preventDefault()
       setValue(hint)
+      onTabFill?.()
     }
     if (e.key === 'ArrowUp' && onArrowUp) {
       e.preventDefault()
