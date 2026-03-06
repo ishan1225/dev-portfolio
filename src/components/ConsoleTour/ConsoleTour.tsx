@@ -77,6 +77,8 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
         if (seen) {
           setTutorialStep(null)
           setHasInteracted(true)
+          const aboutLines = navigateToStep(0)
+          queue.enqueue(aboutLines, 'stagger')
         } else {
           setTutorialStep(0)
         }
