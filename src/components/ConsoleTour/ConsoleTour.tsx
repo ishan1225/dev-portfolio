@@ -70,10 +70,16 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
         ...(entry.pauseAfterMs != null && { pauseAfterMs: entry.pauseAfterMs }),
       }))
       queue.enqueue(lines, 'typewriter', () => {
-        // Boot finished (including last line's pauseAfterMs) — clear and start tutorial
+        // Boot finished — clear and start tutorial (or skip if returning visitor)
         queue.clear()
         setIsBooting(false)
-        setTutorialStep(0)
+        const seen = localStorage.getItem('tutorialCompleted')
+        if (seen) {
+          setTutorialStep(null)
+          setHasInteracted(true)
+        } else {
+          setTutorialStep(0)
+        }
       })
     }
   }, [isFullyOpen, queue.enqueue])
@@ -244,8 +250,9 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       queue.enqueue([
         { id: uid(), type: 'system', text: "you're all set — navigate however you like.", pauseAfterMs: 1500 },
       ], 'typewriter', () => {
-        // Farewell finished — navigate to the saved step
+        // Farewell finished — mark tutorial done and navigate
         setTutorialStep(null)
+        localStorage.setItem('tutorialCompleted', '1')
         const idx = pendingNavRef.current
         if (idx !== null) {
           setHasInteracted(true)
