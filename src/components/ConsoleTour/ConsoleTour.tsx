@@ -133,7 +133,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     const trimmed = input.toLowerCase().trim()
 
     // Easter egg commands → set mode immediately (tabs highlight), delay renderer
-    if (EASTER_EGGS.secret.triggers.includes(trimmed)) {
+    if (easterEggRevealed && EASTER_EGGS.secret.triggers.includes(trimmed)) {
       handleEasterEgg('secret')
       setGameMode(false)
       setMatrixMode(true)
@@ -151,7 +151,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       setMatrixMode(false)
     }
 
-    if (EASTER_EGGS.fun.triggers.includes(trimmed)) {
+    if (easterEggRevealed && EASTER_EGGS.fun.triggers.includes(trimmed)) {
       handleEasterEgg('fun')
       setMatrixMode(false)
       setGameMode(true)
