@@ -12,6 +12,7 @@ interface Props {
   matrixMode: boolean
   gameMode: boolean
   tutorialStep: number | null // null=inactive, 0=continue, 1=tab+enter, 2=click-about
+  closing?: boolean
   onTabClick: (index: number) => void
   onPlayClick: () => void
 }
@@ -20,11 +21,11 @@ export function TerminalProgress({
   progress, label, isBooting, currentStep,
   easterEggRevealed, easterEggPhase, isComplete,
   matrixMode, gameMode,
-  tutorialStep, onTabClick, onPlayClick,
+  tutorialStep, closing, onTabClick, onPlayClick,
 }: Props) {
   // During tutorial: tabs disabled except step 2 (only About enabled)
   const isTabDisabled = (i: number) => {
-    if (isBooting) return true
+    if (closing || isBooting) return true
     if (tutorialStep === 0 || tutorialStep === 1 || tutorialStep === 3) return true
     if (tutorialStep === 2) return i !== 0 // only About (index 0) enabled
     return false
@@ -33,7 +34,7 @@ export function TerminalProgress({
   const inBonusMode = matrixMode || gameMode
 
   // Continue button: always visible, greyed out when not actionable
-  const continueDisabled = isBooting || isComplete || tutorialStep === 1 || tutorialStep === 2 || tutorialStep === 3
+  const continueDisabled = closing || isBooting || isComplete || tutorialStep === 1 || tutorialStep === 2 || tutorialStep === 3
 
   return (
     <div className="px-3.5 lg:px-5 xl:px-6 pt-2 lg:pt-2.5 xl:pt-3 pb-1.5 lg:pb-2 xl:pb-2.5 border-b border-deep-teal">
@@ -78,17 +79,18 @@ export function TerminalProgress({
 
         {/* Bonus tab 1 — ??? → Donut (always rendered, locked until easterEggRevealed) */}
         {(() => {
-          const unlocked = easterEggRevealed
+          const unlocked = !closing && easterEggRevealed
           const revealed = easterEggPhase !== 'none' // typed "secret" at least once
           const label = revealed ? EASTER_EGGS.secret.tabLabel : EASTER_EGGS.secret.unrevealedLabel
           return (
             <button
+              disabled={closing}
               onClick={() => onTabClick(STEPS.length)}
               style={{ minWidth: `${EASTER_EGGS.secret.tabLabel.length + 2}ch` }}
               className={[
                 'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold border-0 font-mono transition-all duration-300',
                 !unlocked
-                  ? 'bg-deep-teal/50 text-muted-purple opacity-40 cursor-pointer'
+                  ? 'bg-deep-teal/50 text-muted-purple opacity-40 cursor-default'
                   : revealed
                     ? matrixMode
                       ? 'bg-matrix-green text-deep-space cursor-pointer'
@@ -103,17 +105,18 @@ export function TerminalProgress({
 
         {/* Bonus tab 2 — ??? → Robo Hop (always rendered, locked until secret phase) */}
         {(() => {
-          const unlocked = easterEggPhase === 'secret' || easterEggPhase === 'done'
+          const unlocked = !closing && (easterEggPhase === 'secret' || easterEggPhase === 'done')
           const revealed = easterEggPhase === 'done' // typed "fun" at least once
           const label = revealed ? EASTER_EGGS.fun.tabLabel : EASTER_EGGS.fun.unrevealedLabel
           return (
             <button
+              disabled={closing}
               onClick={() => onTabClick(STEPS.length + 1)}
               style={{ minWidth: `${EASTER_EGGS.fun.tabLabel.length + 2}ch` }}
               className={[
                 'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold border-0 font-mono transition-all duration-300',
                 !unlocked
-                  ? 'bg-deep-teal/50 text-muted-purple opacity-40 cursor-pointer'
+                  ? 'bg-deep-teal/50 text-muted-purple opacity-40 cursor-default'
                   : revealed
                     ? gameMode
                       ? 'bg-matrix-green text-deep-space cursor-pointer'

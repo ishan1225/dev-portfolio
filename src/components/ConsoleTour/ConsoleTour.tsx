@@ -53,6 +53,9 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
   const [matrixMode, setMatrixMode] = useState(false)
   const [gameMode, setGameMode] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
+  const [closing, setClosing] = useState(false)
+  const [showExitActions, setShowExitActions] = useState(false)
+  const [emailCopied, setEmailCopied] = useState(false)
   const pendingNavRef = useRef<number | null>(null)
 
   // Enqueue boot lines — queue's onComplete is the single source of truth for "boot done"
@@ -98,16 +101,43 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       setMatrixMode(false)
       setGameMode(false)
       setTransitioning(false)
+      setClosing(false)
+      setShowExitActions(false)
+      setEmailCopied(false)
     }
   }, [isActive, queue.clear, historyReset, tourReset])
 
-  // ESC closes terminal (unless game is active — GameRenderer handles ESC internally)
+  // Graceful close — typewrite farewell, then show copy button + hint
+  const handleClose = useCallback(() => {
+    if (closing) { onClose(); return }
+    setClosing(true)
+    setShowExitActions(false)
+    setEmailCopied(false)
+    setIsBooting(false)
+    setMatrixMode(false)
+    setGameMode(false)
+    setTutorialStep(null)
+    queue.clear()
+    queue.enqueue([
+      { id: uid(), type: 'content', text: 'thanks for stopping by.' },
+      { id: uid(), type: 'system', text: 'feel free to reach out for roles, collaborations, or just to chat.' },
+    ], 'typewriter', () => setShowExitActions(true))
+  }, [closing, onClose, queue.clear, queue.enqueue])
+
+  const handleCopyEmail = useCallback(() => {
+    if (emailCopied) return
+    setEmailCopied(true)
+    navigator.clipboard.writeText(CONTACT_EMAIL).then(() => { }, () => { })
+    setTimeout(() => onClose(), 600)
+  }, [emailCopied, onClose])
+
+  // ESC closes terminal
   useEffect(() => {
     if (!isActive) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [isActive, onClose, gameMode])
+  }, [isActive, handleClose])
 
   // Handle typed command input
   const handleInput = useCallback((input: string) => {
@@ -177,7 +207,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       if (stepIdx === CONTACT_STEP_INDEX) {
         navigator.clipboard.writeText(CONTACT_EMAIL).then(
           () => queue.enqueue([{ id: uid(), type: 'system', text: `\u2713 copied ${CONTACT_EMAIL}` }], 'stagger'),
-          () => {},
+          () => { },
         )
       }
       return
@@ -194,13 +224,15 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     if (result.sideEffect === 'copy-email') {
       navigator.clipboard.writeText(CONTACT_EMAIL).then(
         () => queue.enqueue([{ id: uid(), type: 'system', text: `\u2713 copied ${CONTACT_EMAIL}` }], 'stagger'),
-        () => {},
+        () => { },
       )
     }
   }, [tutorialStep, isBooting, execute, historyPush, handleEasterEgg, navigateToStep, currentStep, totalSteps, queue.enqueue, queue.clear, setHasInteracted, matrixMode, gameMode])
 
   // Handle tab click → navigate to step directly
   const handleTabClick = useCallback((stepIndex: number) => {
+    // Block tab clicks during close sequence
+    if (closing) return
     // Block tab clicks during tutorial steps 0 and 1
     if (tutorialStep !== null && tutorialStep < 2) return
 
@@ -270,7 +302,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     if (stepIndex === CONTACT_STEP_INDEX) {
       navigator.clipboard.writeText(CONTACT_EMAIL).then(
         () => queue.enqueue([{ id: uid(), type: 'system', text: `\u2713 copied ${CONTACT_EMAIL}` }], 'stagger'),
-        () => {},
+        () => { },
       )
     }
   }, [tutorialStep, navigateToStep, queue.clear, queue.enqueue, setHasInteracted, handleInput, easterEggPhase, easterEggRevealed])
@@ -367,7 +399,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
           >
             {/* Hide terminal chrome during compress/line/dot phases */}
             <div className="flex flex-col flex-1 min-h-0" style={{ opacity: phase === 'compress' || isClosingVisual ? 0 : 1 }}>
-              <TerminalHeader onClose={onClose} />
+              <TerminalHeader onClose={handleClose} />
               <TerminalProgress
                 progress={displayProgress}
                 label={progressLabel}
@@ -379,22 +411,47 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                 matrixMode={matrixMode}
                 gameMode={gameMode}
                 tutorialStep={tutorialStep}
+                closing={closing}
                 onTabClick={handleTabClick}
                 onPlayClick={handlePlayClick}
               />
-              {!transitioning && gameMode ? <GameRenderer onQuit={handleGameQuit} onDeath={glitch} /> : !transitioning && matrixMode ? <MatrixDonutRenderer /> : <TerminalBody lines={queue.displayLines} />}
-              <TerminalInput
-                isBooting={isBooting}
-                hint={effectiveGhostHint}
-                onSubmit={handleInput}
-                shouldFocus={isFullyOpen && !gameMode && tutorialStep !== 0 && tutorialStep !== 2}
-                shouldPulse={shouldPulse}
-                disabled={tutorialStep === 0 || tutorialStep === 2 || tutorialStep === 3}
-                inputGlow={tutorialStep === 1}
-                onArrowUp={historyUp}
-                onArrowDown={historyDown}
-                onTabFill={() => {}}
-              />
+              {!transitioning && gameMode ? <GameRenderer onQuit={handleGameQuit} onDeath={glitch} /> : !transitioning && matrixMode ? <MatrixDonutRenderer /> : (
+                <TerminalBody lines={queue.displayLines}>
+                  {showExitActions && (
+                    <div className="mt-6 pl-4 font-mono">
+                      <div className="flex items-center gap-3 mb-4">
+                        <button
+                          onClick={handleCopyEmail}
+                          className={[
+                            'px-4 py-[7px] rounded text-[11px] lg:text-xs font-semibold tracking-[1px] cursor-pointer transition-all duration-200 border shrink-0',
+                            emailCopied
+                              ? 'border-matrix-green bg-matrix-green/12 text-matrix-green'
+                              : 'border-matrix-green/35 bg-transparent text-matrix-green hover:bg-matrix-green hover:text-deep-space hover:border-matrix-green',
+                          ].join(' ')}
+                        >
+                          {emailCopied ? '\u2713 copied!' : 'copy email \u2192'}
+                        </button>
+                        <span className="text-warm-gray text-xs">{CONTACT_EMAIL}</span>
+                      </div>
+                      <div className="text-muted-purple text-[11px] pl-1">ESC or × to close</div>
+                    </div>
+                  )}
+                </TerminalBody>
+              )}
+              {!closing && (
+                <TerminalInput
+                  isBooting={isBooting}
+                  hint={effectiveGhostHint}
+                  onSubmit={handleInput}
+                  shouldFocus={isFullyOpen && !gameMode && tutorialStep !== 0 && tutorialStep !== 2}
+                  shouldPulse={shouldPulse}
+                  disabled={tutorialStep === 0 || tutorialStep === 2 || tutorialStep === 3}
+                  inputGlow={tutorialStep === 1}
+                  onArrowUp={historyUp}
+                  onArrowDown={historyDown}
+                  onTabFill={() => { }}
+                />
+              )}
               <TerminalFooter />
             </div>
 
