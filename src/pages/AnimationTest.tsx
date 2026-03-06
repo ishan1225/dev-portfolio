@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, useAnimation } from 'framer-motion'
-import { TIMING } from '../components/ConsoleTour/constants'
+import { OPEN_ANIMATION, CLOSE_ANIMATION } from '../components/ConsoleTour/config/flow'
 
-// Timings come from constants.ts — tweak them there to affect both this test and the real site
-const FLASH_DURATION    = TIMING.openFlash
-const SCANLINE_DURATION = TIMING.openScan
-const COMPRESS_DURATION = TIMING.closeCompress
-const LINE_DURATION     = TIMING.closeLine
-const DOT_DURATION      = TIMING.closeDot
+// Timings come from flow.ts — tweak them there to affect both this test and the real site
+const FLASH_DURATION    = OPEN_ANIMATION.flashMs
+const SCANLINE_DURATION = OPEN_ANIMATION.scanMs
+const COMPRESS_DURATION = CLOSE_ANIMATION.compressMs
+const LINE_DURATION     = CLOSE_ANIMATION.lineMs
+const DOT_DURATION      = CLOSE_ANIMATION.dotMs
 
 const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 

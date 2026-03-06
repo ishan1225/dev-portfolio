@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { commands } from '../data/commands'
+import { commands } from '../config/commands'
 import type { CommandContext, CommandDef, CommandResult } from '../types'
 
 let lineCounter = 0

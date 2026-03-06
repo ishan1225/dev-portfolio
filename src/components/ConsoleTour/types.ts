@@ -6,6 +6,8 @@ export interface DisplayLine {
   type: LineType
   text: string
   showCursor?: boolean
+  /** Optional pause (ms) after this line finishes before the next line starts */
+  pauseAfterMs?: number
 }
 
 export interface BootLine {
@@ -18,8 +20,8 @@ export interface BootLine {
 export interface BootStoryEntry {
   type: LineType
   text: string
-  /** ms from boot start when this line begins printing */
-  delay: number
+  /** ms to wait after this line finishes typing before the next line starts */
+  pauseAfterMs?: number
 }
 
 /** Configures which portfolio content appears in the tour and in what order */
@@ -27,6 +29,8 @@ export interface TourStepConfig {
   type: 'about' | 'project' | 'contact'
   /** Index into PROJECTS array — only for type: 'project' */
   index?: number
+  /** ms to wait after this step's last line before any follow-up content */
+  pauseAfterMs?: number
 }
 
 export interface StepDef {

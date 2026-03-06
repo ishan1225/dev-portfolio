@@ -17,30 +17,36 @@ export const C = {
   nearWhite:    'var(--color-near-white)',
 } as const
 
+/** Global timing defaults — used across all phases. */
 export const TIMING = {
-  /** ms per character for typewriter reveal (boot phase only) */
+  /** ms per character for typewriter reveal */
   typewriterMs:   30,
-  /** total boot phase duration in ms */
-  bootDurationMs: 5200,
-  /** ms between lines for post-boot content stagger */
-  lineStaggerMs:  80,
-  /** ms before pulsing [▸] for first-time nudge */
+  /** default ms to wait after a line finishes before the next starts (per-line pauseAfterMs overrides) */
+  linePauseMs:    100,
+  /** ms before pulsing Continue ▸ for first-time nudge */
   nudgeDelayMs:   3000,
-  /** ms after boot ends before tutorial starts */
-  onboardingDelayMs: 600,
+} as const
 
-  // Open animation — "signal acquisition"
-  openFlash:      100,   // scale overshoot + fade in
-  openScan:       280,   // scanline glitch + horizontal jitter
+/**
+ * Progress bar weighting.
+ * totalSegments = bootWeight + onboardingSteps + visibleTourSteps
+ */
+export const PROGRESS = {
+  /** How many progress segments boot occupies */
+  bootWeight: 2,
+  /** Number of onboarding tutorial steps (continue, tab+enter, click-tab) */
+  onboardingSteps: 3,
+} as const
 
-  // Close animation — "CRT power-off"
-  closeCompress:  240,   // squish vertically, brightness spike
-  closeLine:      200,   // hold as glowing horizontal line
-  closeDot:       300,   // collapse width to zero, afterglow fades
+/** Renderer font sizing */
+export const FONT_SIZES = {
+  gameFontSize:       'clamp(10px, 1.4vw, 16px)',
+  gameLineHeight:     'clamp(13px, 1.75vw, 20px)',
+  matrixFontSize:     '12px',
+  matrixLineHeight:   '1.15',
 } as const
 
 export const SIZES = {
-  /** Terminal sizing now lives in Tailwind classes on ConsoleTour.tsx */
   /** Mobile breakpoint below which console is hidden */
   mobileBreakpoint: 640,
 } as const

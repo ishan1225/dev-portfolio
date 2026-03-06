@@ -1,39 +1,40 @@
-import { AnimatePresence, motion } from 'framer-motion'
-import { STEPS } from './data/steps'
+import { STEPS } from './config/steps'
+import { EASTER_EGGS } from './config/flow'
 
 interface Props {
   progress: number    // 0–1
   label: string       // e.g. "Boot" or "Tour"
   isBooting: boolean
   currentStep: number // 0-based, -1 if no step selected
-  totalSteps: number  // visibleTotal (includes easter egg slot when revealed)
   easterEggRevealed: boolean
   easterEggPhase: 'none' | 'secret' | 'fun' | 'done'
   isComplete: boolean
-  shouldPulse: boolean
+  matrixMode: boolean
+  gameMode: boolean
   tutorialStep: number | null // null=inactive, 0=continue, 1=tab+enter, 2=click-about
+  closing?: boolean
   onTabClick: (index: number) => void
   onPlayClick: () => void
 }
 
 export function TerminalProgress({
   progress, label, isBooting, currentStep,
-  easterEggRevealed, easterEggPhase, isComplete, shouldPulse,
-  tutorialStep, onTabClick, onPlayClick,
+  easterEggRevealed, easterEggPhase, isComplete,
+  matrixMode, gameMode,
+  tutorialStep, closing, onTabClick, onPlayClick,
 }: Props) {
   // During tutorial: tabs disabled except step 2 (only About enabled)
   const isTabDisabled = (i: number) => {
-    if (isBooting) return true
-    if (tutorialStep === 0 || tutorialStep === 1) return true
+    if (closing || isBooting) return true
+    if (tutorialStep === 0 || tutorialStep === 1 || tutorialStep === 3) return true
     if (tutorialStep === 2) return i !== 0 // only About (index 0) enabled
     return false
   }
 
-  const atEasterEgg = easterEggPhase === 'secret' || easterEggPhase === 'done'
+  const inBonusMode = matrixMode || gameMode
 
-  // Continue button: always visible post-boot (greyed out during tutorial steps 1-2)
-  const showContinue = !isBooting && !isComplete
-  const continueDisabled = tutorialStep === 1 || tutorialStep === 2
+  // Continue button: always visible, greyed out when not actionable
+  const continueDisabled = closing || isBooting || isComplete || tutorialStep === 1 || tutorialStep === 2 || tutorialStep === 3
 
   return (
     <div className="px-3.5 lg:px-5 xl:px-6 pt-2 lg:pt-2.5 xl:pt-3 pb-1.5 lg:pb-2 xl:pb-2.5 border-b border-deep-teal">
@@ -53,20 +54,22 @@ export function TerminalProgress({
       <div className="flex gap-1 lg:gap-1.5 flex-wrap items-center" data-onboard="tabs">
         {STEPS.map((step, i) => {
           const disabled = isTabDisabled(i)
-          const isActive = !isBooting && i === currentStep && !atEasterEgg
+          const isActive = !isBooting && i === currentStep && !inBonusMode
           return (
             <button
               key={step.id}
               disabled={disabled}
               onClick={() => !disabled && onTabClick(i)}
-              {...(i === 0 ? { 'data-onboard': 'tab-about' } : {})}
+              {...(i === 0 ? { 'data-onboard': 'tab-first' } : {})}
               className={[
                 'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold border-0 font-mono transition-all duration-300',
                 disabled
                   ? 'bg-deep-teal/50 text-muted-purple opacity-40 cursor-default'
-                  : isActive
-                    ? 'bg-matrix-green text-deep-space cursor-pointer'
-                    : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white',
+                  : tutorialStep === 2 && i === 0
+                    ? 'bg-matrix-green/15 text-matrix-green cursor-pointer tab-pulse-loop'
+                    : isActive
+                      ? 'bg-matrix-green text-deep-space cursor-pointer'
+                      : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white',
               ].join(' ')}
             >
               {step.tabLabel}
@@ -74,43 +77,74 @@ export function TerminalProgress({
           )
         })}
 
-        {/* Bonus easter egg tab — fades in after contact */}
-        <AnimatePresence>
-          {easterEggRevealed && (
-            <motion.span
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.4 }}
+        {/* Bonus tab 1 — ??? → Donut (always rendered, locked until easterEggRevealed) */}
+        {(() => {
+          const unlocked = !closing && easterEggRevealed
+          const revealed = easterEggPhase !== 'none' // typed "secret" at least once
+          const label = revealed ? EASTER_EGGS.secret.tabLabel : EASTER_EGGS.secret.unrevealedLabel
+          return (
+            <button
+              disabled={closing}
+              onClick={() => onTabClick(STEPS.length)}
+              style={{ minWidth: `${EASTER_EGGS.secret.tabLabel.length + 2}ch` }}
               className={[
-                'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold font-mono',
-                atEasterEgg
-                  ? 'bg-matrix-green text-deep-space'
-                  : 'bg-deep-teal/50 text-amber tab-pulse',
+                'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold border-0 font-mono transition-all duration-300',
+                !unlocked
+                  ? 'bg-deep-teal/50 text-muted-purple opacity-40 cursor-default'
+                  : revealed
+                    ? matrixMode
+                      ? 'bg-matrix-green text-deep-space cursor-pointer'
+                      : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white'
+                    : 'bg-deep-teal/50 text-amber tab-pulse cursor-pointer',
               ].join(' ')}
             >
-              Bonus
-            </motion.span>
-          )}
-        </AnimatePresence>
+              {label}
+            </button>
+          )
+        })()}
 
-        {/* Continue button — visible but greyed out when disabled */}
-        {showContinue && (
-          <button
-            data-onboard="continue"
-            disabled={continueDisabled}
-            onClick={() => !continueDisabled && onPlayClick()}
-            className={[
-              'px-2.5 lg:px-3 xl:px-3.5 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-bold border-0 font-mono transition-all duration-300',
-              continueDisabled
-                ? 'bg-deep-teal/50 text-muted-purple opacity-40 cursor-default'
-                : 'bg-matrix-green/15 text-matrix-green hover:text-mint-glow hover:bg-matrix-green/25 cursor-pointer',
-              !continueDisabled && (shouldPulse || tutorialStep === 0) ? 'play-pulse' : !continueDisabled ? 'btn-glow' : '',
-            ].join(' ')}
-          >
-            Continue ▸
-          </button>
-        )}
+        {/* Bonus tab 2 — ??? → Robo Hop (always rendered, locked until secret phase) */}
+        {(() => {
+          const unlocked = !closing && (easterEggPhase === 'secret' || easterEggPhase === 'done')
+          const revealed = easterEggPhase === 'done' // typed "fun" at least once
+          const label = revealed ? EASTER_EGGS.fun.tabLabel : EASTER_EGGS.fun.unrevealedLabel
+          return (
+            <button
+              disabled={closing}
+              onClick={() => onTabClick(STEPS.length + 1)}
+              style={{ minWidth: `${EASTER_EGGS.fun.tabLabel.length + 2}ch` }}
+              className={[
+                'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold border-0 font-mono transition-all duration-300',
+                !unlocked
+                  ? 'bg-deep-teal/50 text-muted-purple opacity-40 cursor-default'
+                  : revealed
+                    ? gameMode
+                      ? 'bg-matrix-green text-deep-space cursor-pointer'
+                      : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white'
+                    : 'bg-deep-teal/50 text-amber tab-pulse cursor-pointer',
+              ].join(' ')}
+            >
+              {label}
+            </button>
+          )
+        })()}
+
+        {/* Continue button — always visible, greyed when disabled */}
+        <button
+          data-onboard="continue"
+          disabled={continueDisabled}
+          onClick={() => !continueDisabled && onPlayClick()}
+          className={[
+            'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold border-0 font-mono transition-all duration-300',
+            continueDisabled
+              ? 'bg-deep-teal/50 text-muted-purple opacity-40 cursor-default'
+              : tutorialStep === 0
+                ? 'bg-matrix-green/15 text-matrix-green cursor-pointer tab-pulse-loop'
+                : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white',
+          ].join(' ')}
+        >
+          Continue ▸
+        </button>
       </div>
 
     </div>

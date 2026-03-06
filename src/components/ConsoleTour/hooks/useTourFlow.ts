@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { STEPS, TOTAL_STEPS, INITIAL_GHOST_HINT } from '../data/steps'
+import { STEPS, TOTAL_STEPS, INITIAL_GHOST_HINT } from '../config/steps'
 import type { DisplayLine } from '../types'
 
 let lineCounter = 0
@@ -18,8 +18,8 @@ export function useTourFlow(enabled: boolean) {
     bootEndTimeRef.current = Date.now()
   }
 
-  // Total visible steps: base steps + 1 if easter egg revealed
-  const visibleTotal = easterEggRevealed ? TOTAL_STEPS + 1 : TOTAL_STEPS
+  // Both bonus tabs always visible (locked until unlocked)
+  const visibleTotal = TOTAL_STEPS + 2
 
   // Navigate to a config step (0-based index into STEPS)
   const navigateToStep = useCallback((index: number): DisplayLine[] => {
@@ -31,7 +31,7 @@ export function useTourFlow(enabled: boolean) {
     const step = STEPS[clamped]
     const lines = step.lines.map(l => ({ ...l, id: uid() }))
 
-    // If this is the last config step (Contact), reveal easter egg tab
+    // Last config step (whatever it is) reveals the easter egg tab
     if (clamped === TOTAL_STEPS - 1 && !easterEggRevealed) {
       setEasterEggRevealed(true)
     }
@@ -47,28 +47,15 @@ export function useTourFlow(enabled: boolean) {
       setEasterEggPhase('secret')
       // Reveal easter egg tab if not already (user might type secret before reaching contact)
       if (!easterEggRevealed) setEasterEggRevealed(true)
-      return [
-        { id: uid(), type: 'header', text: '── ??? ──' },
-        { id: uid(), type: 'system', text: 'decrypting...' },
-        { id: uid(), type: 'content', text: 'matrix donut coming soon.' },
-      ]
+      // Lines handled by matrixMode in ConsoleTour — return empty
+      return []
     }
 
     if (command === 'fun') {
       setEasterEggPhase('done')
       setIsComplete(true)
-      const elapsed = bootEndTimeRef.current ? Date.now() - bootEndTimeRef.current : 0
-      const minutes = Math.floor(elapsed / 60000)
-      const seconds = Math.floor((elapsed % 60000) / 1000)
-      const timeStr = `${minutes}:${String(seconds).padStart(2, '0')}`
-      return [
-        { id: uid(), type: 'header', text: '── ??? ──' },
-        { id: uid(), type: 'system', text: 'initializing...' },
-        { id: uid(), type: 'content', text: 'game coming soon.' },
-        { id: uid(), type: 'content', text: '' },
-        { id: uid(), type: 'system', text: `✓ tour complete — ${timeStr}` },
-        { id: uid(), type: 'content', text: 'thanks for exploring.' },
-      ]
+      // Game renderer handles display — return empty
+      return []
     }
 
     return []
@@ -80,7 +67,7 @@ export function useTourFlow(enabled: boolean) {
     if (currentStep === -1) return INITIAL_GHOST_HINT
     if (currentStep < TOTAL_STEPS) {
       const stepHint = STEPS[currentStep].ghostHint
-      // After contact, the step hint is 'secret', but check easter egg phase
+      // Last step hints at easter egg — override with phase-aware hint
       if (currentStep === TOTAL_STEPS - 1) {
         if (easterEggPhase === 'none') return 'secret'
         if (easterEggPhase === 'secret') return 'fun'

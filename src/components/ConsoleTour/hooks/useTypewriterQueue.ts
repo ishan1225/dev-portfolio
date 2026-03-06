@@ -1,24 +1,27 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { TIMING } from '../constants'
+import { TIMING } from '../config/constants'
 import type { DisplayLine } from '../types'
 
 interface QueueItem {
   line: DisplayLine
   mode: 'typewriter' | 'stagger'
+  onComplete?: () => void
 }
 
 /**
  * Universal output queue — ALL terminal output flows through this.
- * Supports two modes:
- * - 'typewriter': per-character reveal (boot phase)
- * - 'stagger': whole lines appear with delay between them (post-boot)
- * User echo lines (type 'user') and empty lines always appear instantly.
+ * Two modes:
+ * - 'typewriter': per-character reveal (boot phase, easter egg messages)
+ * - 'stagger': whole lines appear instantly (post-boot step content)
+ *
+ * After each line, waits line.pauseAfterMs (if set) or TIMING.linePauseMs.
+ * User echo lines (type 'user') appear with zero delay.
+ * Optional onComplete callback fires after the last line's pause elapses.
  */
-export function useTypewriterQueue(
-  charMs: number = TIMING.typewriterMs,
-  staggerMs: number = TIMING.lineStaggerMs,
-  pauseMs: number = 100,
-) {
+export function useTypewriterQueue() {
+  const charMs = TIMING.typewriterMs
+  const defaultPause = TIMING.linePauseMs
+
   const queueRef = useRef<QueueItem[]>([])
   const [completed, setCompleted] = useState<DisplayLine[]>([])
   const [typing, setTyping] = useState<{ line: DisplayLine; chars: number } | null>(null)
@@ -39,31 +42,39 @@ export function useTypewriterQueue(
     }
 
     const item = queueRef.current.shift()!
-    const { line, mode } = item
+    const { line, mode, onComplete } = item
+    const pause = line.pauseAfterMs ?? defaultPause
+
+    const advance = (delay: number) => {
+      if (queueRef.current.length > 0) {
+        pauseRef.current = setTimeout(processNext, delay)
+      } else if (delay > 0 && onComplete) {
+        // Last line with callback — wait for pause then fire
+        pauseRef.current = setTimeout(() => {
+          processingRef.current = false
+          onComplete()
+        }, delay)
+      } else {
+        processingRef.current = false
+        onComplete?.()
+      }
+    }
 
     // User echoes and empty lines appear instantly
     if (line.type === 'user' || line.text.length === 0) {
       setCompleted(prev => [...prev, line])
-      if (queueRef.current.length > 0) {
-        pauseRef.current = setTimeout(processNext, line.type === 'user' ? 0 : staggerMs)
-      } else {
-        processingRef.current = false
-      }
+      advance(line.type === 'user' ? 0 : pause)
       return
     }
 
-    // Stagger mode: line appears whole instantly, then delay before next
+    // Stagger mode: whole line appears, then pause
     if (mode === 'stagger') {
       setCompleted(prev => [...prev, line])
-      if (queueRef.current.length > 0) {
-        pauseRef.current = setTimeout(processNext, staggerMs)
-      } else {
-        processingRef.current = false
-      }
+      advance(pause)
       return
     }
 
-    // Typewriter mode: character by character
+    // Typewriter mode: character by character, then pause
     let chars = 0
     setTyping({ line, chars: 0 })
 
@@ -74,20 +85,24 @@ export function useTypewriterQueue(
         intervalRef.current = null
         setTyping(null)
         setCompleted(prev => [...prev, line])
-        if (queueRef.current.length > 0) {
-          pauseRef.current = setTimeout(processNext, pauseMs)
-        } else {
-          processingRef.current = false
-        }
+        advance(pause)
       } else {
         setTyping({ line, chars })
       }
     }, charMs)
-  }, [charMs, staggerMs, pauseMs])
+  }, [charMs, defaultPause])
 
-  const enqueue = useCallback((lines: DisplayLine[], mode: 'typewriter' | 'stagger' = 'typewriter') => {
+  const enqueue = useCallback((
+    lines: DisplayLine[],
+    mode: 'typewriter' | 'stagger' = 'typewriter',
+    onComplete?: () => void,
+  ) => {
     if (lines.length === 0) return
-    const items = lines.map(line => ({ line, mode }))
+    const items: QueueItem[] = lines.map(line => ({ line, mode }))
+    // Attach onComplete to the last item so it fires after its pause
+    if (onComplete) {
+      items[items.length - 1].onComplete = onComplete
+    }
     queueRef.current.push(...items)
     if (!processingRef.current) {
       processingRef.current = true
