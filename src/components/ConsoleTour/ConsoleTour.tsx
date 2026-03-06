@@ -378,9 +378,9 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                 isBooting={isBooting}
                 hint={effectiveGhostHint}
                 onSubmit={handleInput}
-                shouldFocus={isFullyOpen && tutorialStep !== 0 && tutorialStep !== 2}
+                shouldFocus={isFullyOpen && !gameMode && tutorialStep !== 0 && tutorialStep !== 2}
                 shouldPulse={shouldPulse}
-                disabled={gameMode || tutorialStep === 0 || tutorialStep === 2 || tutorialStep === 3}
+                disabled={tutorialStep === 0 || tutorialStep === 2 || tutorialStep === 3}
                 inputGlow={tutorialStep === 1}
                 onArrowUp={historyUp}
                 onArrowDown={historyDown}

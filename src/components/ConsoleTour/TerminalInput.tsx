@@ -18,7 +18,12 @@ export function TerminalInput({ isBooting, hint, onSubmit, shouldFocus, shouldPu
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    if (isBooting) setValue('')
+  }, [isBooting])
+
+  useEffect(() => {
     if (shouldFocus && !disabled) inputRef.current?.focus()
+    else inputRef.current?.blur()
   }, [shouldFocus, disabled])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
