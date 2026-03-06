@@ -110,6 +110,12 @@ function Divider() {
 export function Landing() {
   const [isOpen, setIsOpen] = useState(false)
   const handleClose = useCallback(() => setIsOpen(false), [])
+
+  // Lock page scroll when terminal is open
+  useEffect(() => {
+    document.body.style.overflow = isOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [isOpen])
   const [copied, setCopied] = useState(false)
   const [expandedProject, setExpandedProject] = useState<number | null>(null)
   const [expandedExp, setExpandedExp] = useState<number | null>(null)
