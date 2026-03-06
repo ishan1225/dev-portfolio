@@ -52,6 +52,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
   const [tutorialStep, setTutorialStep] = useState<number | null>(null)
   const [matrixMode, setMatrixMode] = useState(false)
   const [gameMode, setGameMode] = useState(false)
+  const [transitioning, setTransitioning] = useState(false)
   const tutorialStartedRef = useRef(false)
   const pendingNavRef = useRef<number | null>(null)
 
@@ -129,6 +130,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       pendingNavRef.current = null
       setMatrixMode(false)
       setGameMode(false)
+      setTransitioning(false)
     }
   }, [isActive, queue.clear, historyReset, tourReset])
 
@@ -139,52 +141,6 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [isActive, onClose, gameMode])
-
-  // Handle tab click → navigate to step directly
-  const handleTabClick = useCallback((stepIndex: number) => {
-    // Block tab clicks during tutorial steps 0 and 1
-    if (tutorialStep !== null && tutorialStep < 2) return
-
-    // Tutorial step 2: show farewell, then navigate after delay
-    if (tutorialStep === 2) {
-      setTutorialStep(3)
-      pendingNavRef.current = stepIndex
-      queue.clear() // clear step feedback so farewell message is clean
-      return
-    }
-
-    // Bonus tab: Donut (index === totalSteps)
-    if (stepIndex === totalSteps) {
-      setGameMode(false)
-      setMatrixMode(true)
-      queue.clear()
-      return
-    }
-
-    // Bonus tab: Robo Hop (index === totalSteps + 1)
-    if (stepIndex === totalSteps + 1) {
-      setMatrixMode(false)
-      setGameMode(true)
-      queue.clear()
-      return
-    }
-
-    // Regular tab — dismiss game/matrix mode
-    setGameMode(false)
-    setMatrixMode(false)
-    setHasInteracted(true)
-    const lines = navigateToStep(stepIndex)
-    queue.clear()
-    queue.enqueue(lines, 'stagger')
-
-    // Contact step → copy email
-    if (stepIndex === totalSteps - 1) {
-      navigator.clipboard.writeText(CONTACT_EMAIL).then(
-        () => queue.enqueue([{ id: uid(), type: 'system', text: `\u2713 copied ${CONTACT_EMAIL}` }], 'stagger'),
-        () => {},
-      )
-    }
-  }, [tutorialStep, navigateToStep, totalSteps, queue.clear, queue.enqueue, setHasInteracted])
 
   // Handle typed command input
   const handleInput = useCallback((input: string) => {
@@ -211,18 +167,19 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
 
     const trimmed = input.toLowerCase().trim()
 
-    // Easter egg commands → show transition message, then enter mode after delay
+    // Easter egg commands → set mode immediately (tabs highlight), delay renderer
     if (trimmed === 'secret') {
       handleEasterEgg('secret')
-      if (matrixMode) setMatrixMode(false)
-      if (gameMode) setGameMode(false)
+      setGameMode(false)
+      setMatrixMode(true)
+      setTransitioning(true)
       queue.clear()
       queue.enqueue([
         echo,
         { id: uid(), type: 'system', text: 'Bonus section unlocked. Hello Neo, do you like donuts with your coffee?' },
       ])
       // 72 chars × 30ms + stagger + 1.2s reading pause
-      setTimeout(() => setMatrixMode(true), 3800)
+      setTimeout(() => setTransitioning(false), 3800)
       return
     }
 
@@ -233,14 +190,16 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
 
     if (trimmed === 'fun' || trimmed === 'game' || trimmed === 'play') {
       handleEasterEgg('fun')
-      if (gameMode) setGameMode(false)
+      setMatrixMode(false)
+      setGameMode(true)
+      setTransitioning(true)
       queue.clear()
       queue.enqueue([
         echo,
         { id: uid(), type: 'system', text: 'booting up Robo Hop... beep boop' },
       ])
       // 34 chars × 30ms + stagger + 1s reading pause
-      setTimeout(() => setGameMode(true), 2500)
+      setTimeout(() => setTransitioning(false), 2500)
       return
     }
 
@@ -277,7 +236,59 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
         () => {},
       )
     }
-  }, [tutorialStep, isBooting, execute, historyPush, handleEasterEgg, navigateToStep, currentStep, totalSteps, queue.enqueue, queue.clear, setHasInteracted])
+  }, [tutorialStep, isBooting, execute, historyPush, handleEasterEgg, navigateToStep, currentStep, totalSteps, queue.enqueue, queue.clear, setHasInteracted, matrixMode, gameMode])
+
+  // Handle tab click → navigate to step directly
+  const handleTabClick = useCallback((stepIndex: number) => {
+    // Block tab clicks during tutorial steps 0 and 1
+    if (tutorialStep !== null && tutorialStep < 2) return
+
+    // Tutorial step 2: show farewell, then navigate after delay
+    if (tutorialStep === 2) {
+      setTutorialStep(3)
+      pendingNavRef.current = stepIndex
+      queue.clear() // clear step feedback so farewell message is clean
+      return
+    }
+
+    // Bonus tab: Donut (index === totalSteps)
+    if (stepIndex === totalSteps) {
+      // ??? state → run through handleInput for full transition ceremony
+      if (easterEggPhase === 'none') { handleInput('secret'); return }
+      // Already revealed → direct mode switch
+      setGameMode(false)
+      setMatrixMode(true)
+      queue.clear()
+      return
+    }
+
+    // Bonus tab: Robo Hop (index === totalSteps + 1)
+    if (stepIndex === totalSteps + 1) {
+      // ??? state → run through handleInput for full transition ceremony
+      if (easterEggPhase === 'secret') { handleInput('fun'); return }
+      // Already revealed → direct mode switch
+      setMatrixMode(false)
+      setGameMode(true)
+      queue.clear()
+      return
+    }
+
+    // Regular tab — dismiss game/matrix mode
+    setGameMode(false)
+    setMatrixMode(false)
+    setHasInteracted(true)
+    const lines = navigateToStep(stepIndex)
+    queue.clear()
+    queue.enqueue(lines, 'stagger')
+
+    // Contact step → copy email
+    if (stepIndex === totalSteps - 1) {
+      navigator.clipboard.writeText(CONTACT_EMAIL).then(
+        () => queue.enqueue([{ id: uid(), type: 'system', text: `\u2713 copied ${CONTACT_EMAIL}` }], 'stagger'),
+        () => {},
+      )
+    }
+  }, [tutorialStep, navigateToStep, totalSteps, queue.clear, queue.enqueue, setHasInteracted, handleInput, easterEggPhase])
 
   // Handle [▸] play button
   const handlePlayClick = () => {
@@ -383,11 +394,13 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                 easterEggPhase={easterEggPhase}
                 isComplete={isComplete}
                 shouldPulse={shouldPulse}
+                matrixMode={matrixMode}
+                gameMode={gameMode}
                 tutorialStep={tutorialStep}
                 onTabClick={handleTabClick}
                 onPlayClick={handlePlayClick}
               />
-              {gameMode ? <GameRenderer onQuit={handleGameQuit} /> : matrixMode ? <MatrixDonutRenderer /> : <TerminalBody lines={queue.displayLines} />}
+              {!transitioning && gameMode ? <GameRenderer onQuit={handleGameQuit} /> : !transitioning && matrixMode ? <MatrixDonutRenderer /> : <TerminalBody lines={queue.displayLines} />}
               <TerminalInput
                 isBooting={isBooting}
                 hint={effectiveGhostHint}

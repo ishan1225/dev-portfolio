@@ -11,6 +11,8 @@ interface Props {
   easterEggPhase: 'none' | 'secret' | 'fun' | 'done'
   isComplete: boolean
   shouldPulse: boolean
+  matrixMode: boolean
+  gameMode: boolean
   tutorialStep: number | null // null=inactive, 0=continue, 1=tab+enter, 2=click-about
   onTabClick: (index: number) => void
   onPlayClick: () => void
@@ -19,6 +21,7 @@ interface Props {
 export function TerminalProgress({
   progress, label, isBooting, currentStep,
   easterEggRevealed, easterEggPhase, isComplete, shouldPulse,
+  matrixMode, gameMode,
   tutorialStep, onTabClick, onPlayClick,
 }: Props) {
   // During tutorial: tabs disabled except step 2 (only About enabled)
@@ -29,7 +32,7 @@ export function TerminalProgress({
     return false
   }
 
-  const atEasterEgg = easterEggPhase === 'secret' || easterEggPhase === 'done'
+  const inBonusMode = matrixMode || gameMode
 
   // Continue button: always visible, greyed out when not actionable
   const continueDisabled = isBooting || isComplete || tutorialStep === 1 || tutorialStep === 2
@@ -52,7 +55,7 @@ export function TerminalProgress({
       <div className="flex gap-1 lg:gap-1.5 flex-wrap items-center" data-onboard="tabs">
         {STEPS.map((step, i) => {
           const disabled = isTabDisabled(i)
-          const isActive = !isBooting && i === currentStep && !atEasterEgg
+          const isActive = !isBooting && i === currentStep && !inBonusMode
           return (
             <button
               key={step.id}
@@ -81,15 +84,14 @@ export function TerminalProgress({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ duration: 0.4 }}
-              disabled={easterEggPhase === 'none'}
-              onClick={() => easterEggPhase !== 'none' && onTabClick(STEPS.length)}
+              onClick={() => onTabClick(STEPS.length)}
               className={[
                 'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold border-0 font-mono transition-all duration-300',
-                easterEggPhase === 'secret'
-                  ? 'bg-matrix-green text-deep-space cursor-pointer'
-                  : easterEggPhase === 'done'
-                    ? 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white'
-                    : 'bg-deep-teal/50 text-amber tab-pulse cursor-default',
+                easterEggPhase === 'none'
+                  ? 'bg-deep-teal/50 text-amber tab-pulse cursor-pointer'
+                  : matrixMode
+                    ? 'bg-matrix-green text-deep-space cursor-pointer'
+                    : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white',
               ].join(' ')}
             >
               {easterEggPhase === 'none' ? '???' : 'Donut'}
@@ -105,13 +107,14 @@ export function TerminalProgress({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ duration: 0.4 }}
-              disabled={easterEggPhase !== 'done'}
-              onClick={() => easterEggPhase === 'done' && onTabClick(STEPS.length + 1)}
+              onClick={() => onTabClick(STEPS.length + 1)}
               className={[
                 'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold border-0 font-mono transition-all duration-300',
-                easterEggPhase === 'done'
-                  ? 'bg-matrix-green text-deep-space cursor-pointer'
-                  : 'bg-deep-teal/50 text-amber tab-pulse cursor-default',
+                easterEggPhase !== 'done'
+                  ? 'bg-deep-teal/50 text-amber tab-pulse cursor-pointer'
+                  : gameMode
+                    ? 'bg-matrix-green text-deep-space cursor-pointer'
+                    : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white',
               ].join(' ')}
             >
               {easterEggPhase === 'done' ? 'Robo Hop' : '???'}
