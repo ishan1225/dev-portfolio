@@ -7,12 +7,13 @@ interface Props {
   shouldFocus?: boolean
   shouldPulse?: boolean
   disabled?: boolean
+  inputGlow?: boolean
   onArrowUp?: () => string | null
   onArrowDown?: () => string | null
   onTabFill?: () => void
 }
 
-export function TerminalInput({ isBooting, hint, onSubmit, shouldFocus, shouldPulse, disabled, onArrowUp, onArrowDown, onTabFill }: Props) {
+export function TerminalInput({ isBooting, hint, onSubmit, shouldFocus, shouldPulse, disabled, inputGlow, onArrowUp, onArrowDown, onTabFill }: Props) {
   const [value, setValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -43,7 +44,7 @@ export function TerminalInput({ isBooting, hint, onSubmit, shouldFocus, shouldPu
   }
 
   return (
-    <div data-onboard="input" className="flex items-center gap-2 lg:gap-2.5 xl:gap-3 px-3.5 lg:px-5 xl:px-6 py-2 lg:py-2.5 xl:py-3 bg-deep-teal/20 border-t border-matrix-green/30 input-glow">
+    <div data-onboard="input" className={`flex items-center gap-2 lg:gap-2.5 xl:gap-3 px-3.5 lg:px-5 xl:px-6 py-2 lg:py-2.5 xl:py-3 bg-deep-teal/20 border-t border-matrix-green/30${inputGlow ? ' input-glow' : ''}`}>
       <span className={`text-matrix-green font-bold text-base lg:text-lg xl:text-xl leading-none ${shouldPulse ? 'prompt-pulse' : ''}`}>
         ›
       </span>

@@ -8,13 +8,11 @@ import {
   type GameState,
   type GameFrame,
 } from './utils/asciiRunner'
+import { FONT_SIZES } from './config/constants'
 
 interface Props {
   onQuit: (score: number) => void
 }
-
-const FONT_SIZE = '16px'
-const LINE_HEIGHT = '20px'
 
 export function GameRenderer({ onQuit }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -167,8 +165,8 @@ export function GameRenderer({ onQuit }: Props) {
     inset: 0,
     margin: 0,
     fontFamily: 'inherit',
-    fontSize: FONT_SIZE,
-    lineHeight: LINE_HEIGHT,
+    fontSize: FONT_SIZES.gameFontSize,
+    lineHeight: FONT_SIZES.gameLineHeight,
     whiteSpace: 'pre',
     userSelect: 'none',
     overflow: 'hidden',
@@ -193,8 +191,8 @@ export function GameRenderer({ onQuit }: Props) {
           visibility: 'hidden',
           whiteSpace: 'pre',
           fontFamily: 'inherit',
-          fontSize: FONT_SIZE,
-          lineHeight: LINE_HEIGHT,
+          fontSize: FONT_SIZES.gameFontSize,
+          lineHeight: FONT_SIZES.gameLineHeight,
         }}
       >
         M

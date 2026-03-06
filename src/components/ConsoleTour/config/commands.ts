@@ -1,28 +1,28 @@
 import type { CommandDef, DisplayLine } from '../types'
-import {
-  PROJECTS, ABOUT_TOUR, CONTACT_TOUR,
-  SKILL_GROUPS, EXPERIENCE, SOCIAL_LINKS, LOCATION,
-} from '../../../data/portfolio'
+import { STEPS } from './steps'
+import { PROJECTS, EXPERIENCE } from './content'
 
 let lineCounter = 0
 const uid = () => `cmd-${++lineCounter}`
+
+/** Clone a tour step's lines with fresh IDs. Returns null if step not found. */
+function stepLines(id: string): DisplayLine[] | null {
+  const step = STEPS.find(s => s.id === id)
+  if (!step) return null
+  return step.lines.map(l => ({ ...l, id: uid() }))
+}
 
 export const commands: CommandDef[] = [
   {
     name: 'about',
     description: 'Introduction and skills',
     visible: true,
-    execute: () => ({
-      lines: [
-        { id: uid(), type: 'header', text: '── ABOUT ──' },
-        ...ABOUT_TOUR.narrative.map(t => ({ id: uid(), type: 'content' as const, text: t })),
-        { id: uid(), type: 'content', text: '' },
-        ...SKILL_GROUPS.map(g => ({
-          id: uid(), type: 'content' as const,
-          text: `${g.label.padEnd(10)} — ${g.items.join(', ')}`,
-        })),
-      ],
-    }),
+    execute: () => {
+      const lines = stepLines('about')
+      return lines
+        ? { lines }
+        : { lines: [{ id: uid(), type: 'error', text: 'about section not available' }] }
+    },
   },
   {
     name: 'experience',
@@ -78,17 +78,12 @@ export const commands: CommandDef[] = [
     name: 'contact',
     description: 'Contact info',
     visible: true,
-    execute: () => ({
-      lines: [
-        { id: uid(), type: 'header', text: '── CONTACT ──' },
-        ...CONTACT_TOUR.narrative.map(t => ({ id: uid(), type: 'content' as const, text: t })),
-        { id: uid(), type: 'content', text: '' },
-        ...SOCIAL_LINKS.map(s => ({ id: uid(), type: 'content' as const, text: `${s.label}: ${s.href}` })),
-        { id: uid(), type: 'content', text: '' },
-        { id: uid(), type: 'content', text: LOCATION },
-      ],
-      sideEffect: 'copy-email',
-    }),
+    execute: () => {
+      const lines = stepLines('contact')
+      return lines
+        ? { lines, sideEffect: 'copy-email' }
+        : { lines: [{ id: uid(), type: 'error', text: 'contact section not available' }] }
+    },
   },
   {
     name: 'help',
@@ -104,34 +99,6 @@ export const commands: CommandDef[] = [
         { id: uid(), type: 'content', text: 'contact       Contact info' },
         { id: uid(), type: 'content', text: 'help          This list' },
       ],
-    }),
-  },
-  {
-    name: 'secret',
-    description: 'Easter egg',
-    visible: false,
-    execute: () => ({
-      lines: [
-        { id: uid(), type: 'header', text: '── ??? ──' },
-        { id: uid(), type: 'system', text: 'decrypting...' },
-        { id: uid(), type: 'content', text: 'matrix donut coming soon.' },
-      ],
-      sideEffect: 'glitch',
-      glitchIntensity: 0.7,
-    }),
-  },
-  {
-    name: 'fun',
-    description: 'Easter egg',
-    visible: false,
-    execute: () => ({
-      lines: [
-        { id: uid(), type: 'header', text: '── ??? ──' },
-        { id: uid(), type: 'system', text: 'initializing...' },
-        { id: uid(), type: 'content', text: 'game coming soon.' },
-      ],
-      sideEffect: 'glitch',
-      glitchIntensity: 0.5,
     }),
   },
 ]

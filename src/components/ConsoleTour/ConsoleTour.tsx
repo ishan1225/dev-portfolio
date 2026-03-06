@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useBootSequence } from './hooks/useBootSequence'
 import { useCommands } from './hooks/useCommands'
 import { useCommandHistory } from './hooks/useCommandHistory'
 import { useTourFlow } from './hooks/useTourFlow'
@@ -14,9 +13,9 @@ import { TerminalFooter } from './TerminalFooter'
 import { OnboardingOverlay } from './OnboardingOverlay'
 import { MatrixDonutRenderer } from './MatrixDonutRenderer'
 import { GameRenderer } from './GameRenderer'
-import { bootStory } from './data/bootStory'
-import { CONTACT_EMAIL, resolveStepArg } from './data/steps'
-import { TIMING } from './constants'
+import { BOOT_LINES, BOOT_DURATION_MS, EASTER_EGGS, OPEN_ANIMATION, CLOSE_ANIMATION } from './config/flow'
+import { CONTACT_EMAIL, CONTACT_STEP_INDEX, resolveStepArg } from './config/steps'
+import { PROGRESS } from './config/constants'
 import type { DisplayLine } from './types'
 
 interface Props {
@@ -31,11 +30,12 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
   const { phase, termCtrl, backdropCtrl, isActive, isFullyOpen, isClosingVisual } =
     useTerminalAnimation(isOpen)
 
-  const bootResult = useBootSequence(isFullyOpen)
-  const isBooting = bootResult.isBooting
-  const progress = bootResult.progress
   const { execute } = useCommands()
   const { push: historyPush, up: historyUp, down: historyDown, reset: historyReset } = useCommandHistory()
+
+  const [isBooting, setIsBooting] = useState(true)
+  const [bootProgress, setBootProgress] = useState(0)
+  const bootStartRef = useRef<number>(0)
 
   const tourEnabled = !isBooting && isFullyOpen
   const {
@@ -53,70 +53,36 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
   const [matrixMode, setMatrixMode] = useState(false)
   const [gameMode, setGameMode] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
-  const tutorialStartedRef = useRef(false)
   const pendingNavRef = useRef<number | null>(null)
 
-  // Enqueue boot lines when terminal fully opens
+  // Enqueue boot lines — queue's onComplete is the single source of truth for "boot done"
   useEffect(() => {
     if (isFullyOpen && !bootEnqueuedRef.current) {
       bootEnqueuedRef.current = true
-      const lines: DisplayLine[] = bootStory.map((entry, i) => ({
+      bootStartRef.current = Date.now()
+      const lines: DisplayLine[] = BOOT_LINES.map((entry, i) => ({
         id: `boot-${i}`,
         type: entry.type,
         text: entry.text,
+        ...(entry.pauseAfterMs != null && { pauseAfterMs: entry.pauseAfterMs }),
       }))
-      queue.enqueue(lines) // typewriter mode (default) for boot
+      queue.enqueue(lines, 'typewriter', () => {
+        // Boot finished (including last line's pauseAfterMs) — clear and start tutorial
+        queue.clear()
+        setIsBooting(false)
+        setTutorialStep(0)
+      })
     }
   }, [isFullyOpen, queue.enqueue])
 
-  // Start interactive tutorial after boot completes
+  // Boot progress bar animation (cosmetic — driven by BOOT_DURATION_MS estimate)
   useEffect(() => {
-    if (!isBooting && isFullyOpen && !tutorialStartedRef.current) {
-      tutorialStartedRef.current = true
-      setTutorialStep(0) // immediately — so label shows INTRO, no "0/5" flash
-    }
-  }, [isBooting, isFullyOpen])
-
-  // Clear boot text shortly after tutorial begins (separate effect for StrictMode compat)
-  useEffect(() => {
-    if (tutorialStep !== 0) return
-    const timer = setTimeout(() => {
-      queue.clear()
-    }, TIMING.onboardingDelayMs)
-    return () => clearTimeout(timer)
-  }, [tutorialStep, queue.clear])
-
-  // Farewell step 3: show message, then navigate, then dismiss
-  useEffect(() => {
-    if (tutorialStep !== 3) return
-    const stepIndex = pendingNavRef.current
-
-    // 1.8s: farewell visible on clean body
-    // 1.8s: load content underneath (overlay still visible)
-    // 2.5s: dismiss overlay — content revealed
-    const navTimer = setTimeout(() => {
-      if (stepIndex !== null) {
-        setHasInteracted(true)
-        const lines = navigateToStep(stepIndex)
-        queue.clear()
-        queue.enqueue(lines, 'stagger')
-        queue.enqueue([
-          { id: uid(), type: 'content', text: '' },
-          { id: uid(), type: 'system', text: 'tip: tabs, Continue ▸, and commands — all three work.' },
-        ], 'stagger')
-        pendingNavRef.current = null
-      }
-    }, 1800)
-
-    const dismissTimer = setTimeout(() => {
-      setTutorialStep(null)
-    }, 2500)
-
-    return () => {
-      clearTimeout(navTimer)
-      clearTimeout(dismissTimer)
-    }
-  }, [tutorialStep, navigateToStep, queue.clear, queue.enqueue, setHasInteracted])
+    if (!isFullyOpen || !isBooting) return
+    const interval = setInterval(() => {
+      setBootProgress(Math.min((Date.now() - bootStartRef.current) / BOOT_DURATION_MS, 1))
+    }, 50)
+    return () => clearInterval(interval)
+  }, [isFullyOpen, isBooting])
 
   // Reset all state when terminal goes idle
   useEffect(() => {
@@ -125,8 +91,9 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       historyReset()
       tourReset()
       bootEnqueuedRef.current = false
+      setIsBooting(true)
+      setBootProgress(0)
       setTutorialStep(null)
-      tutorialStartedRef.current = false
       pendingNavRef.current = null
       setMatrixMode(false)
       setGameMode(false)
@@ -144,14 +111,12 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
 
   // Handle typed command input
   const handleInput = useCallback((input: string) => {
-    // Tutorial step 1: intercept — don't navigate, just acknowledge
+    // Tutorial step 1: run the command normally (help), then advance
     if (tutorialStep === 1) {
       const echo: DisplayLine = { id: uid(), type: 'user', text: input }
+      const result = execute(input, { currentStep, totalSteps: visibleTotal })
       queue.clear()
-      queue.enqueue([
-        echo,
-        { id: uid(), type: 'system', text: '✓ type commands to jump directly to any section.' },
-      ], 'stagger')
+      queue.enqueue([echo, ...result.lines], 'stagger')
       setTutorialStep(2)
       return
     }
@@ -168,7 +133,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     const trimmed = input.toLowerCase().trim()
 
     // Easter egg commands → set mode immediately (tabs highlight), delay renderer
-    if (trimmed === 'secret') {
+    if (EASTER_EGGS.secret.triggers.includes(trimmed)) {
       handleEasterEgg('secret')
       setGameMode(false)
       setMatrixMode(true)
@@ -176,10 +141,8 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       queue.clear()
       queue.enqueue([
         echo,
-        { id: uid(), type: 'system', text: 'Bonus section unlocked. Hello Neo, do you like donuts with your coffee?' },
-      ])
-      // 72 chars × 30ms + stagger + 1.2s reading pause
-      setTimeout(() => setTransitioning(false), 3800)
+        { id: uid(), type: 'system', text: EASTER_EGGS.secret.message, pauseAfterMs: EASTER_EGGS.secret.pauseAfterMs },
+      ], 'typewriter', () => setTransitioning(false))
       return
     }
 
@@ -188,7 +151,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       setMatrixMode(false)
     }
 
-    if (trimmed === 'fun' || trimmed === 'game' || trimmed === 'play') {
+    if (EASTER_EGGS.fun.triggers.includes(trimmed)) {
       handleEasterEgg('fun')
       setMatrixMode(false)
       setGameMode(true)
@@ -196,10 +159,8 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       queue.clear()
       queue.enqueue([
         echo,
-        { id: uid(), type: 'system', text: 'booting up Robo Hop... beep boop' },
-      ])
-      // 34 chars × 30ms + stagger + 1s reading pause
-      setTimeout(() => setTransitioning(false), 2500)
+        { id: uid(), type: 'system', text: EASTER_EGGS.fun.message, pauseAfterMs: EASTER_EGGS.fun.pauseAfterMs },
+      ], 'typewriter', () => setTransitioning(false))
       return
     }
 
@@ -213,7 +174,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       queue.enqueue([echo, ...lines], 'stagger')
 
       // Contact step → copy email
-      if (stepIdx === totalSteps - 1) {
+      if (stepIdx === CONTACT_STEP_INDEX) {
         navigator.clipboard.writeText(CONTACT_EMAIL).then(
           () => queue.enqueue([{ id: uid(), type: 'system', text: `\u2713 copied ${CONTACT_EMAIL}` }], 'stagger'),
           () => {},
@@ -243,11 +204,25 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     // Block tab clicks during tutorial steps 0 and 1
     if (tutorialStep !== null && tutorialStep < 2) return
 
-    // Tutorial step 2: show farewell, then navigate after delay
+    // Tutorial step 2: type farewell into terminal, navigate after pauseAfterMs
     if (tutorialStep === 2) {
-      setTutorialStep(3)
+      setTutorialStep(3) // blocks tabs/input during farewell
       pendingNavRef.current = stepIndex
-      queue.clear() // clear step feedback so farewell message is clean
+      queue.clear()
+      queue.enqueue([
+        { id: uid(), type: 'system', text: "you're all set — navigate however you like.", pauseAfterMs: 1500 },
+      ], 'typewriter', () => {
+        // Farewell finished — navigate to the saved step
+        setTutorialStep(null)
+        const idx = pendingNavRef.current
+        if (idx !== null) {
+          setHasInteracted(true)
+          const lines = navigateToStep(idx)
+          queue.clear()
+          queue.enqueue(lines, 'stagger')
+          pendingNavRef.current = null
+        }
+      })
       return
     }
 
@@ -282,7 +257,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     queue.enqueue(lines, 'stagger')
 
     // Contact step → copy email
-    if (stepIndex === totalSteps - 1) {
+    if (stepIndex === CONTACT_STEP_INDEX) {
       navigator.clipboard.writeText(CONTACT_EMAIL).then(
         () => queue.enqueue([{ id: uid(), type: 'system', text: `\u2713 copied ${CONTACT_EMAIL}` }], 'stagger'),
         () => {},
@@ -318,26 +293,25 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
   // Derive display values — tutorial overrides
   const inTutorial = tutorialStep !== null && tutorialStep < 3
   const shouldPulse = tourEnabled && !hasInteracted && tutorialStep === null
-  const effectiveGhostHint = tutorialStep === 1 ? 'about' : inTutorial ? '' : ghostHint
+  const effectiveGhostHint = tutorialStep === 1 ? 'help' : tutorialStep !== null ? '' : ghostHint
 
-  // Unified progress: boot(2) + intro(3) + tour(visibleTotal) segments — no resets
-  const BOOT_WEIGHT = 2
-  const INTRO_STEPS = 3
-  const totalSegments = BOOT_WEIGHT + INTRO_STEPS + visibleTotal
+  // Unified progress: boot + onboarding + tour segments — no resets
+  const totalSegments = PROGRESS.bootWeight + PROGRESS.onboardingSteps + visibleTotal
   const atEasterEgg = easterEggPhase === 'secret' || easterEggPhase === 'done'
   const inTutorialOrFarewell = tutorialStep !== null
 
+  const { bootWeight, onboardingSteps } = PROGRESS
   const displayProgress = isBooting
-    ? progress * (BOOT_WEIGHT / totalSegments)
+    ? bootProgress * (bootWeight / totalSegments)
     : inTutorial
-      ? (BOOT_WEIGHT + tutorialStep!) / totalSegments
+      ? (bootWeight + tutorialStep!) / totalSegments
       : easterEggPhase === 'done' || isComplete
         ? 1
         : easterEggPhase === 'secret'
-          ? (BOOT_WEIGHT + INTRO_STEPS + visibleTotal - 1) / totalSegments
+          ? (bootWeight + onboardingSteps + visibleTotal - 1) / totalSegments
           : currentStep >= 0
-            ? (BOOT_WEIGHT + INTRO_STEPS + currentStep + 1) / totalSegments
-            : (BOOT_WEIGHT + INTRO_STEPS) / totalSegments
+            ? (bootWeight + onboardingSteps + currentStep + 1) / totalSegments
+            : (bootWeight + onboardingSteps) / totalSegments
 
   // Simple phase labels — no numbers, progress bar tells the story
   const progressLabel = isBooting
@@ -393,7 +367,6 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                 easterEggRevealed={easterEggRevealed}
                 easterEggPhase={easterEggPhase}
                 isComplete={isComplete}
-                shouldPulse={shouldPulse}
                 matrixMode={matrixMode}
                 gameMode={gameMode}
                 tutorialStep={tutorialStep}
@@ -407,7 +380,8 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                 onSubmit={handleInput}
                 shouldFocus={isFullyOpen && tutorialStep !== 0 && tutorialStep !== 2}
                 shouldPulse={shouldPulse}
-                disabled={gameMode || tutorialStep === 0 || tutorialStep === 2}
+                disabled={gameMode || tutorialStep === 0 || tutorialStep === 2 || tutorialStep === 3}
+                inputGlow={tutorialStep === 1}
                 onArrowUp={historyUp}
                 onArrowDown={historyDown}
                 onTabFill={() => {}}
@@ -417,7 +391,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
 
             {/* Tutorial callout overlay */}
             <AnimatePresence>
-              {tutorialStep !== null && (
+              {tutorialStep !== null && tutorialStep < 3 && (
                 <OnboardingOverlay step={tutorialStep} />
               )}
             </AnimatePresence>
@@ -437,7 +411,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                   }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0, 0.9, 0.2, 0.8, 0] }}
-                  transition={{ duration: TIMING.openScan / 1000, delay: i * 0.07, ease: 'easeInOut' }}
+                  transition={{ duration: OPEN_ANIMATION.scanMs / 1000, delay: i * 0.07, ease: 'easeInOut' }}
                 />
               ))}
             </div>
@@ -449,7 +423,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
               className="absolute inset-0 flex items-center justify-center pointer-events-none"
               initial={{ opacity: 0.7 }}
               animate={{ opacity: 0 }}
-              transition={{ duration: TIMING.closeDot / 1000 }}
+              transition={{ duration: CLOSE_ANIMATION.dotMs / 1000 }}
             >
               <div
                 style={{

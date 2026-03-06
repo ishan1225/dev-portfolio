@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ConsoleTour } from '../components/ConsoleTour/ConsoleTour'
-import { C } from '../components/ConsoleTour/constants'
+import { C } from '../components/ConsoleTour/config/constants'
 import {
   SKILL_GROUPS,
   PROJECTS,
@@ -9,7 +9,7 @@ import {
   CONTACT_EMAIL,
   SOCIAL_LINKS,
   LOCATION,
-} from '../data/portfolio'
+} from '../components/ConsoleTour/config/content'
 
 /* ── Scroll-direction-aware section reveal ── */
 

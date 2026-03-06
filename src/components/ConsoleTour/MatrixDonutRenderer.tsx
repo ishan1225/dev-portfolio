@@ -11,6 +11,7 @@ import {
   type MatrixState,
   type MatrixDonutConfig,
 } from './utils/matrixDonut'
+import { FONT_SIZES } from './config/constants'
 
 interface Grid {
   cols: number
@@ -202,11 +203,8 @@ export function MatrixDonutRenderer() {
     return () => cancelAnimationFrame(raf)
   }, [motionOK, fontReady])
 
-  // Fixed font size — NOT viewport-relative. The container is capped at max-w-1200px,
-  // so vw-based sizing causes the same container to get different font sizes at
-  // different viewport widths, producing inconsistent grid resolution and donut size.
-  const fontSize = '12px'
-  const lineHeight = '1.15'
+  const fontSize = FONT_SIZES.matrixFontSize
+  const lineHeight = FONT_SIZES.matrixLineHeight
   const nearColor = mixHex(config.matrixColor, '#ffffff', clamp(config.nearMixToWhite, 0, 1))
 
   const preBase: React.CSSProperties = {

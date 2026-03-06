@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { STEPS, TOTAL_STEPS, INITIAL_GHOST_HINT } from '../data/steps'
+import { STEPS, TOTAL_STEPS, INITIAL_GHOST_HINT } from '../config/steps'
 import type { DisplayLine } from '../types'
 
 let lineCounter = 0
@@ -33,7 +33,7 @@ export function useTourFlow(enabled: boolean) {
     const step = STEPS[clamped]
     const lines = step.lines.map(l => ({ ...l, id: uid() }))
 
-    // If this is the last config step (Contact), reveal easter egg tab
+    // Last config step (whatever it is) reveals the easter egg tab
     if (clamped === TOTAL_STEPS - 1 && !easterEggRevealed) {
       setEasterEggRevealed(true)
     }
@@ -69,7 +69,7 @@ export function useTourFlow(enabled: boolean) {
     if (currentStep === -1) return INITIAL_GHOST_HINT
     if (currentStep < TOTAL_STEPS) {
       const stepHint = STEPS[currentStep].ghostHint
-      // After contact, the step hint is 'secret', but check easter egg phase
+      // Last step hints at easter egg — override with phase-aware hint
       if (currentStep === TOTAL_STEPS - 1) {
         if (easterEggPhase === 'none') return 'secret'
         if (easterEggPhase === 'secret') return 'fun'

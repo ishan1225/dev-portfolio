@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { STEPS } from './data/steps'
+import { STEPS } from './config/steps'
+import { EASTER_EGGS } from './config/flow'
 
 interface Props {
   progress: number    // 0–1
@@ -10,7 +11,6 @@ interface Props {
   easterEggRevealed: boolean
   easterEggPhase: 'none' | 'secret' | 'fun' | 'done'
   isComplete: boolean
-  shouldPulse: boolean
   matrixMode: boolean
   gameMode: boolean
   tutorialStep: number | null // null=inactive, 0=continue, 1=tab+enter, 2=click-about
@@ -20,14 +20,14 @@ interface Props {
 
 export function TerminalProgress({
   progress, label, isBooting, currentStep,
-  easterEggRevealed, easterEggPhase, isComplete, shouldPulse,
+  easterEggRevealed, easterEggPhase, isComplete,
   matrixMode, gameMode,
   tutorialStep, onTabClick, onPlayClick,
 }: Props) {
   // During tutorial: tabs disabled except step 2 (only About enabled)
   const isTabDisabled = (i: number) => {
     if (isBooting) return true
-    if (tutorialStep === 0 || tutorialStep === 1) return true
+    if (tutorialStep === 0 || tutorialStep === 1 || tutorialStep === 3) return true
     if (tutorialStep === 2) return i !== 0 // only About (index 0) enabled
     return false
   }
@@ -35,7 +35,7 @@ export function TerminalProgress({
   const inBonusMode = matrixMode || gameMode
 
   // Continue button: always visible, greyed out when not actionable
-  const continueDisabled = isBooting || isComplete || tutorialStep === 1 || tutorialStep === 2
+  const continueDisabled = isBooting || isComplete || tutorialStep === 1 || tutorialStep === 2 || tutorialStep === 3
 
   return (
     <div className="px-3.5 lg:px-5 xl:px-6 pt-2 lg:pt-2.5 xl:pt-3 pb-1.5 lg:pb-2 xl:pb-2.5 border-b border-deep-teal">
@@ -61,14 +61,16 @@ export function TerminalProgress({
               key={step.id}
               disabled={disabled}
               onClick={() => !disabled && onTabClick(i)}
-              {...(i === 0 ? { 'data-onboard': 'tab-about' } : {})}
+              {...(i === 0 ? { 'data-onboard': 'tab-first' } : {})}
               className={[
                 'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold border-0 font-mono transition-all duration-300',
                 disabled
                   ? 'bg-deep-teal/50 text-muted-purple opacity-40 cursor-default'
-                  : isActive
-                    ? 'bg-matrix-green text-deep-space cursor-pointer'
-                    : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white',
+                  : tutorialStep === 2 && i === 0
+                    ? 'bg-matrix-green/15 text-matrix-green cursor-pointer tab-pulse-loop'
+                    : isActive
+                      ? 'bg-matrix-green text-deep-space cursor-pointer'
+                      : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white',
               ].join(' ')}
             >
               {step.tabLabel}
@@ -94,7 +96,7 @@ export function TerminalProgress({
                     : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white',
               ].join(' ')}
             >
-              {easterEggPhase === 'none' ? '???' : 'Donut'}
+              {easterEggPhase === 'none' ? EASTER_EGGS.secret.unrevealedLabel : EASTER_EGGS.secret.tabLabel}
             </motion.button>
           )}
         </AnimatePresence>
@@ -117,7 +119,7 @@ export function TerminalProgress({
                     : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white',
               ].join(' ')}
             >
-              {easterEggPhase === 'done' ? 'Robo Hop' : '???'}
+              {easterEggPhase === 'done' ? EASTER_EGGS.fun.tabLabel : EASTER_EGGS.fun.unrevealedLabel}
             </motion.button>
           )}
         </AnimatePresence>
@@ -128,11 +130,12 @@ export function TerminalProgress({
           disabled={continueDisabled}
           onClick={() => !continueDisabled && onPlayClick()}
           className={[
-            'px-2.5 lg:px-3 xl:px-3.5 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-bold border-0 font-mono transition-all duration-300',
+            'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold border-0 font-mono transition-all duration-300',
             continueDisabled
               ? 'bg-deep-teal/50 text-muted-purple opacity-40 cursor-default'
-              : 'bg-matrix-green/15 text-matrix-green hover:text-mint-glow hover:bg-matrix-green/25 cursor-pointer',
-            !continueDisabled && (shouldPulse || tutorialStep === 0) ? 'play-pulse' : !continueDisabled ? 'btn-glow' : '',
+              : tutorialStep === 0
+                ? 'bg-matrix-green/15 text-matrix-green cursor-pointer tab-pulse-loop'
+                : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white',
           ].join(' ')}
         >
           Continue ▸

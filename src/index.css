@@ -97,6 +97,10 @@ body {
   animation: tab-pulse 1.5s ease-in-out 3;
 }
 
+.tab-pulse-loop {
+  animation: tab-pulse 1.5s ease-in-out infinite;
+}
+
 /* Onboarding callout arrows */
 .callout-arrow-up::before {
   content: '';
