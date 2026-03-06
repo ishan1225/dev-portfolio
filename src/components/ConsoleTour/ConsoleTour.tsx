@@ -27,7 +27,7 @@ let lineCounter = 0
 const uid = () => `line-${++lineCounter}`
 
 export function ConsoleTour({ isOpen, onClose }: Props) {
-  const { phase, termCtrl, backdropCtrl, isActive, isFullyOpen, isClosingVisual } =
+  const { phase, termCtrl, backdropCtrl, isActive, isFullyOpen, isClosingVisual, glitching, glitch } =
     useTerminalAnimation(isOpen)
 
   const { execute } = useCommands()
@@ -142,7 +142,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       queue.enqueue([
         echo,
         { id: uid(), type: 'system', text: EASTER_EGGS.secret.message, pauseAfterMs: EASTER_EGGS.secret.pauseAfterMs },
-      ], 'typewriter', () => setTransitioning(false))
+      ], 'typewriter', () => { glitch(); setTransitioning(false) })
       return
     }
 
@@ -382,7 +382,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                 onTabClick={handleTabClick}
                 onPlayClick={handlePlayClick}
               />
-              {!transitioning && gameMode ? <GameRenderer onQuit={handleGameQuit} /> : !transitioning && matrixMode ? <MatrixDonutRenderer /> : <TerminalBody lines={queue.displayLines} />}
+              {!transitioning && gameMode ? <GameRenderer onQuit={handleGameQuit} onDeath={glitch} /> : !transitioning && matrixMode ? <MatrixDonutRenderer /> : <TerminalBody lines={queue.displayLines} />}
               <TerminalInput
                 isBooting={isBooting}
                 hint={effectiveGhostHint}
@@ -406,12 +406,12 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
             </AnimatePresence>
           </motion.div>
 
-          {/* Scanlines overlay — open animation phase 2 */}
-          {phase === 'scan' && (
+          {/* Scanlines overlay — open animation + glitch */}
+          {(phase === 'scan' || glitching) && (
             <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl">
               {SCANLINE_POSITIONS.map((top, i) => (
                 <motion.div
-                  key={i}
+                  key={`${glitching ? 'g' : 's'}-${i}`}
                   className="absolute left-0 right-0"
                   style={{
                     top: `${top}%`,
@@ -419,8 +419,12 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                     background: 'linear-gradient(90deg, transparent, var(--color-matrix-green), var(--color-mint-glow), var(--color-matrix-green), transparent)',
                   }}
                   initial={{ opacity: 0 }}
-                  animate={{ opacity: [0, 0.9, 0.2, 0.8, 0] }}
-                  transition={{ duration: OPEN_ANIMATION.scanMs / 1000, delay: i * 0.07, ease: 'easeInOut' }}
+                  animate={{ opacity: glitching ? [0, 0.7, 0] : [0, 0.9, 0.2, 0.8, 0] }}
+                  transition={{
+                    duration: glitching ? 0.15 : OPEN_ANIMATION.scanMs / 1000,
+                    delay: glitching ? i * 0.02 : i * 0.07,
+                    ease: 'easeInOut',
+                  }}
                 />
               ))}
             </div>

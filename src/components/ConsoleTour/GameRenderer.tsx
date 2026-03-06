@@ -10,17 +10,22 @@ import {
 } from './utils/asciiRunner'
 import { FONT_SIZES } from './config/constants'
 
+let persistedBest = 0
+
 interface Props {
   onQuit: (score: number) => void
+  onDeath?: () => void
 }
 
-export function GameRenderer({ onQuit }: Props) {
+export function GameRenderer({ onQuit, onDeath }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const probeRef = useRef<HTMLSpanElement>(null)
   const gameRef = useRef<GameState | null>(null)
   const gridDirtyRef = useRef(true)
   const colsRef = useRef(80)
   const rowsRef = useRef(30)
+  const onDeathRef = useRef(onDeath)
+  onDeathRef.current = onDeath
 
   const [frame, setFrame] = useState<GameFrame>({ teal: '', warmGray: '', silver: '', amber: '' })
   const [fontReady, setFontReady] = useState(false)
@@ -64,6 +69,7 @@ export function GameRenderer({ onQuit }: Props) {
     measureGrid()
     gridDirtyRef.current = false
     gameRef.current = makeGame(colsRef.current, rowsRef.current)
+    gameRef.current.best = persistedBest
 
     let raf = 0
     let lastT = 0
@@ -93,7 +99,12 @@ export function GameRenderer({ onQuit }: Props) {
 
       const g = gameRef.current
       if (g) {
+        const wasDead = g.gameOver
         stepGame(g, dt, colsRef.current, rowsRef.current)
+        if (!wasDead && g.gameOver) {
+          persistedBest = g.best
+          onDeathRef.current?.()
+        }
         setFrame(renderGame(g, colsRef.current, rowsRef.current))
       }
 

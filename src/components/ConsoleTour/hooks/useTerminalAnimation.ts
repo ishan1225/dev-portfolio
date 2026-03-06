@@ -86,6 +86,24 @@ export function useTerminalAnimation(isOpen: boolean) {
     backdropCtrl.set({ opacity: 0 })
   }
 
+  // Quick glitch — horizontal jitter + brief scanlines (no phase change)
+  const [glitching, setGlitching] = useState(false)
+  const glitchRef = useRef(false)
+
+  async function glitch() {
+    if (glitchRef.current || phaseRef.current !== 'open') return
+    glitchRef.current = true
+    setGlitching(true)
+    termCtrl.start({
+      x: [0, -2, 3, -3, 2, -1, 0],
+      transition: { duration: 0.15, times: [0, 0.15, 0.3, 0.5, 0.7, 0.85, 1], ease: 'linear' },
+    })
+    await sleep(180)
+    termCtrl.set({ x: 0 })
+    setGlitching(false)
+    glitchRef.current = false
+  }
+
   return {
     phase,
     termCtrl,
@@ -93,5 +111,7 @@ export function useTerminalAnimation(isOpen: boolean) {
     isActive:      phase !== 'idle',
     isFullyOpen:   phase === 'open',
     isClosingVisual: phase === 'line' || phase === 'dot',
+    glitching,
+    glitch,
   }
 }

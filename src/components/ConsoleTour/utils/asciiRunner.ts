@@ -35,6 +35,7 @@ export interface GameState {
   distSinceSpawn: number
   nextSpawnDist: number
   scrollOffset: number
+  deathFreezeT: number   // countdown after death — freeze rendering until 0
 }
 
 export interface GameFrame {
@@ -215,10 +216,16 @@ export function makeGame(cols: number, rows: number): GameState {
     distSinceSpawn: 0,
     nextSpawnDist: Math.floor(cols * 0.5),
     scrollOffset: 0,
+    deathFreezeT: 0,
   }
 }
 
 export function stepGame(g: GameState, dt: number, cols: number, rows: number): void {
+  // Tick down death freeze (glitch plays during this window)
+  if (g.deathFreezeT > 0) {
+    g.deathFreezeT = Math.max(0, g.deathFreezeT - dt)
+    return
+  }
   if (g.paused || !g.started || g.gameOver) return
 
   const groundY = rows - GROUND_OFFSET
@@ -273,9 +280,10 @@ export function stepGame(g: GameState, dt: number, cols: number, rows: number): 
     }
   }
 
-  // Collision
+  // Collision — freeze for 0.3s (glitch plays), then show death screen
   for (const o of g.obstacles) {
     if (aabb(PLAYER_X, g.py, ROBOT_W, ROBOT_H, o.x, o.y, o.w, o.h)) {
+      g.deathFreezeT = 0.3
       g.gameOver = true
       g.started = false
       if (g.score > g.best) g.best = g.score
@@ -334,7 +342,7 @@ export function renderGame(g: GameState, cols: number, rows: number): GameFrame 
   const playBottom = groundY - 1
   const midRow = Math.floor((playTop + playBottom) / 2)
 
-  if (g.gameOver) {
+  if (g.gameOver && g.deathFreezeT <= 0) {
     // AMBER: death message in play area
     drawTextCentered(amberGrid, midRow, cols, '[ SYSTEM COMPROMISED ]')
     // WARMGRAY: restart hint below floor
@@ -345,8 +353,10 @@ export function renderGame(g: GameState, cols: number, rows: number): GameFrame 
     // WARMGRAY: resume hint below floor
     drawTextCentered(warmGrayGrid, instrRow, cols, 'P resume  \u00B7  ESC quit')
   } else if (!g.started) {
-    // WARMGRAY: control instructions below floor only
-    drawTextCentered(warmGrayGrid, instrRow, cols, 'SPACE jump (hold = higher)  \u00B7  P pause  \u00B7  ESC quit')
+    // AMBER: start prompt in play area
+    drawTextCentered(amberGrid, midRow, cols, '[ SPACE TO START ]')
+    // WARMGRAY: controls below floor
+    drawTextCentered(warmGrayGrid, instrRow, cols, 'SPACE jump (hold = higher)  \u00B7  P pause  \u00B7  Q quit')
   } else {
     // Active gameplay: keep instructions visible
     drawTextCentered(warmGrayGrid, instrRow, cols, 'SPACE jump (hold = higher)  \u00B7  P pause  \u00B7  ESC quit')
@@ -362,6 +372,7 @@ export function renderGame(g: GameState, cols: number, rows: number): GameFrame 
 
 export function handleSpaceDown(g: GameState, cols: number, rows: number): void {
   const groundY = rows - GROUND_OFFSET
+  if (g.deathFreezeT > 0) return // block input during death freeze
   if (g.gameOver) {
     const best = g.best
     Object.assign(g, makeGame(cols, rows))
