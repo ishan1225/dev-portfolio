@@ -38,10 +38,10 @@ export const PROGRESS = {
   onboardingSteps: 3,
 } as const
 
-/** Renderer font sizing — fixed, not viewport-relative */
+/** Renderer font sizing */
 export const FONT_SIZES = {
-  gameFontSize:       '16px',
-  gameLineHeight:     '20px',
+  gameFontSize:       'clamp(10px, 1.4vw, 16px)',
+  gameLineHeight:     'clamp(13px, 1.75vw, 20px)',
   matrixFontSize:     '12px',
   matrixLineHeight:   '1.15',
 } as const
