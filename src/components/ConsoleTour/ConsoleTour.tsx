@@ -211,12 +211,18 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
 
     const trimmed = input.toLowerCase().trim()
 
-    // Easter egg commands → handleEasterEgg for content + state
+    // Easter egg commands → show transition message, then enter mode after delay
     if (trimmed === 'secret') {
       handleEasterEgg('secret')
-      setMatrixMode(true)
+      if (matrixMode) setMatrixMode(false)
+      if (gameMode) setGameMode(false)
       queue.clear()
-      queue.enqueue([echo], 'stagger')
+      queue.enqueue([
+        echo,
+        { id: uid(), type: 'system', text: 'Bonus section unlocked. Hello Neo, do you like donuts with your coffee?' },
+      ])
+      // 72 chars × 30ms + stagger + 1.2s reading pause
+      setTimeout(() => setMatrixMode(true), 3800)
       return
     }
 
@@ -227,9 +233,14 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
 
     if (trimmed === 'fun' || trimmed === 'game' || trimmed === 'play') {
       handleEasterEgg('fun')
-      if (matrixMode) setMatrixMode(false)
-      setGameMode(true)
+      if (gameMode) setGameMode(false)
       queue.clear()
+      queue.enqueue([
+        echo,
+        { id: uid(), type: 'system', text: 'booting up Robo Hop... beep boop' },
+      ])
+      // 34 chars × 30ms + stagger + 1s reading pause
+      setTimeout(() => setGameMode(true), 2500)
       return
     }
 
@@ -386,7 +397,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                 disabled={gameMode || tutorialStep === 0 || tutorialStep === 2}
                 onArrowUp={historyUp}
                 onArrowDown={historyDown}
-                onTabFill={() => { if (matrixMode) setMatrixMode(false) }}
+                onTabFill={() => {}}
               />
               <TerminalFooter />
             </div>
