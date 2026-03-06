@@ -14,7 +14,7 @@ import { OnboardingOverlay } from './OnboardingOverlay'
 import { MatrixDonutRenderer } from './MatrixDonutRenderer'
 import { GameRenderer } from './GameRenderer'
 import { BOOT_LINES, BOOT_DURATION_MS, EASTER_EGGS, OPEN_ANIMATION, CLOSE_ANIMATION } from './config/flow'
-import { CONTACT_EMAIL, CONTACT_STEP_INDEX, resolveStepArg } from './config/steps'
+import { CONTACT_EMAIL, CONTACT_STEP_INDEX, TOTAL_STEPS, resolveStepArg } from './config/steps'
 import { PROGRESS } from './config/constants'
 import type { DisplayLine } from './types'
 
@@ -226,8 +226,13 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       return
     }
 
-    // Bonus tab: Donut (index === totalSteps)
-    if (stepIndex === totalSteps) {
+    // Bonus tab: Donut (index === TOTAL_STEPS)
+    if (stepIndex === TOTAL_STEPS) {
+      // Locked — not yet revealed
+      if (!easterEggRevealed) {
+        queue.enqueue([{ id: uid(), type: 'system', text: 'complete all sections to unlock this feature.' }], 'stagger')
+        return
+      }
       // ??? state → run through handleInput for full transition ceremony
       if (easterEggPhase === 'none') { handleInput('secret'); return }
       // Already revealed → direct mode switch
@@ -237,8 +242,13 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       return
     }
 
-    // Bonus tab: Robo Hop (index === totalSteps + 1)
-    if (stepIndex === totalSteps + 1) {
+    // Bonus tab: Robo Hop (index === TOTAL_STEPS + 1)
+    if (stepIndex === TOTAL_STEPS + 1) {
+      // Locked — secret not yet completed
+      if (easterEggPhase !== 'secret' && easterEggPhase !== 'done') {
+        queue.enqueue([{ id: uid(), type: 'system', text: 'complete all sections to unlock this feature.' }], 'stagger')
+        return
+      }
       // ??? state → run through handleInput for full transition ceremony
       if (easterEggPhase === 'secret') { handleInput('fun'); return }
       // Already revealed → direct mode switch
@@ -263,7 +273,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
         () => {},
       )
     }
-  }, [tutorialStep, navigateToStep, totalSteps, queue.clear, queue.enqueue, setHasInteracted, handleInput, easterEggPhase])
+  }, [tutorialStep, navigateToStep, queue.clear, queue.enqueue, setHasInteracted, handleInput, easterEggPhase, easterEggRevealed])
 
   // Handle [▸] play button
   const handlePlayClick = () => {
@@ -363,7 +373,6 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                 label={progressLabel}
                 isBooting={isBooting}
                 currentStep={currentStep}
-                totalSteps={visibleTotal}
                 easterEggRevealed={easterEggRevealed}
                 easterEggPhase={easterEggPhase}
                 isComplete={isComplete}

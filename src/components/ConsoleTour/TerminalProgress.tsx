@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from 'framer-motion'
 import { STEPS } from './config/steps'
 import { EASTER_EGGS } from './config/flow'
 
@@ -7,7 +6,6 @@ interface Props {
   label: string       // e.g. "Boot" or "Tour"
   isBooting: boolean
   currentStep: number // 0-based, -1 if no step selected
-  totalSteps: number  // visibleTotal (includes easter egg slot when revealed)
   easterEggRevealed: boolean
   easterEggPhase: 'none' | 'secret' | 'fun' | 'done'
   isComplete: boolean
@@ -78,51 +76,55 @@ export function TerminalProgress({
           )
         })}
 
-        {/* First bonus tab — ??? → Donut */}
-        <AnimatePresence>
-          {easterEggRevealed && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.4 }}
+        {/* Bonus tab 1 — ??? → Donut (always rendered, locked until easterEggRevealed) */}
+        {(() => {
+          const unlocked = easterEggRevealed
+          const revealed = easterEggPhase !== 'none' // typed "secret" at least once
+          const label = revealed ? EASTER_EGGS.secret.tabLabel : EASTER_EGGS.secret.unrevealedLabel
+          return (
+            <button
               onClick={() => onTabClick(STEPS.length)}
+              style={{ minWidth: `${EASTER_EGGS.secret.tabLabel.length + 2}ch` }}
               className={[
                 'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold border-0 font-mono transition-all duration-300',
-                easterEggPhase === 'none'
-                  ? 'bg-deep-teal/50 text-amber tab-pulse cursor-pointer'
-                  : matrixMode
-                    ? 'bg-matrix-green text-deep-space cursor-pointer'
-                    : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white',
+                !unlocked
+                  ? 'bg-deep-teal/50 text-muted-purple opacity-40 cursor-pointer'
+                  : revealed
+                    ? matrixMode
+                      ? 'bg-matrix-green text-deep-space cursor-pointer'
+                      : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white'
+                    : 'bg-deep-teal/50 text-amber tab-pulse cursor-pointer',
               ].join(' ')}
             >
-              {easterEggPhase === 'none' ? EASTER_EGGS.secret.unrevealedLabel : EASTER_EGGS.secret.tabLabel}
-            </motion.button>
-          )}
-        </AnimatePresence>
+              {label}
+            </button>
+          )
+        })()}
 
-        {/* Second bonus tab — ??? → Robo Hop */}
-        <AnimatePresence>
-          {(easterEggPhase === 'secret' || easterEggPhase === 'done') && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.4 }}
+        {/* Bonus tab 2 — ??? → Robo Hop (always rendered, locked until secret phase) */}
+        {(() => {
+          const unlocked = easterEggPhase === 'secret' || easterEggPhase === 'done'
+          const revealed = easterEggPhase === 'done' // typed "fun" at least once
+          const label = revealed ? EASTER_EGGS.fun.tabLabel : EASTER_EGGS.fun.unrevealedLabel
+          return (
+            <button
               onClick={() => onTabClick(STEPS.length + 1)}
+              style={{ minWidth: `${EASTER_EGGS.fun.tabLabel.length + 2}ch` }}
               className={[
                 'px-2 lg:px-2.5 xl:px-3 py-[3px] lg:py-1 rounded-[3px] text-[11px] lg:text-xs xl:text-[13px] font-semibold border-0 font-mono transition-all duration-300',
-                easterEggPhase !== 'done'
-                  ? 'bg-deep-teal/50 text-amber tab-pulse cursor-pointer'
-                  : gameMode
-                    ? 'bg-matrix-green text-deep-space cursor-pointer'
-                    : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white',
+                !unlocked
+                  ? 'bg-deep-teal/50 text-muted-purple opacity-40 cursor-pointer'
+                  : revealed
+                    ? gameMode
+                      ? 'bg-matrix-green text-deep-space cursor-pointer'
+                      : 'bg-deep-teal/50 text-silver cursor-pointer hover:text-near-white'
+                    : 'bg-deep-teal/50 text-amber tab-pulse cursor-pointer',
               ].join(' ')}
             >
-              {easterEggPhase === 'done' ? EASTER_EGGS.fun.tabLabel : EASTER_EGGS.fun.unrevealedLabel}
-            </motion.button>
-          )}
-        </AnimatePresence>
+              {label}
+            </button>
+          )
+        })()}
 
         {/* Continue button — always visible, greyed when disabled */}
         <button

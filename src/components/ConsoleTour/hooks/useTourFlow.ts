@@ -18,10 +18,8 @@ export function useTourFlow(enabled: boolean) {
     bootEndTimeRef.current = Date.now()
   }
 
-  // Total visible steps: base + first bonus (??→Donut) + second bonus (??→Robo Hop)
-  const bonus1 = easterEggRevealed ? 1 : 0
-  const bonus2 = easterEggPhase === 'secret' || easterEggPhase === 'done' ? 1 : 0
-  const visibleTotal = TOTAL_STEPS + bonus1 + bonus2
+  // Both bonus tabs always visible (locked until unlocked)
+  const visibleTotal = TOTAL_STEPS + 2
 
   // Navigate to a config step (0-based index into STEPS)
   const navigateToStep = useCallback((index: number): DisplayLine[] => {
