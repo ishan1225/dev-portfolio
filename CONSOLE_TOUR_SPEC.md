@@ -487,6 +487,11 @@ Final command list (8 commands):
 - [ ] Cross-browser testing
 - [ ] Skip tutorial on return: persist `tutorialCompleted` to localStorage, skip the interactive intro for returning visitors (still show on first visit or when storage cleared)
 
+### Stage 8: Post-V1 Deploy
+- [ ] **Update resume to match website content and host as downloadable PDF** (highest priority)
+- [ ] Add GitHub/Demo links per project card in Featured Work (currently commented out in Landing.tsx)
+- [ ] Wire real Resume URL into social links once PDF is hosted (GitHub + LinkedIn already wired)
+
 ## Suggested File Structure
 ```
 src/

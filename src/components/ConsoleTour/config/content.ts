@@ -31,168 +31,248 @@ export interface TourSection {
   impact: string[]
 }
 
+// ─── Skills ─────────────────────────────────────────────────────────
+
 export const SKILL_GROUPS: SkillGroup[] = [
-  { label: "Frontend", items: ["React", "TypeScript", "Tailwind", "Framer Motion", "D3"] },
-  { label: "Backend", items: ["Node.js", "PostgreSQL", "GraphQL", "Redis", "REST"] },
-  { label: "Infra", items: ["AWS", "Docker", "Terraform", "CI/CD"] },
+  { label: "Languages & Frameworks", items: ["TypeScript", "React", "Next.js", "Node.js", "NestJS", "Python", "FastAPI", "Flask", "C/C++", "LangChain"] },
+  { label: "Data & Search", items: ["PostgreSQL", "Redis", "Cassandra", "DynamoDB", "Kafka", "Elasticsearch"] },
+  { label: "Cloud & Infra", items: ["AWS", "Lambda", "SQS", "SES", "ECS", "CloudFormation", "IoT Core", "Docker", "Kubernetes", "Terraform", "GitHub Actions"] },
+  { label: "Quality & Ops", items: ["TestContainers", "Datadog", "Prometheus", "Grafana", "Kibana"] },
 ]
 
+// ─── Projects ───────────────────────────────────────────────────────
+
 export const PROJECTS: Project[] = [
+  // {
+  //   title: "AI Prescreener & RAG Chatbot",
+  //   desc: "OpenAI-powered intake prescreener and LLM support chatbot with hybrid retrieval.",
+  //   impactBadge: "sped up intake",
+  //   tags: ["OpenAI", "LangChain", "Next.js", "pgvector"],
+  //   bullets: [
+  //     "Built prescreener for adaptive response classification and follow-ups",
+  //     "Delivered RAG chatbot with tiered models and A/B-tested prompts",
+  //     "Selected pgvector on AWS over Pinecone/Chroma for cost + latency",
+  //   ],
+  //   impact: [
+  //     "Sped up intake and reduced screening churn",
+  //     "Controlled token spend with tiered model strategy",
+  //     "Prompt guardrails cut hallucinations and kept tone on-brand",
+  //     "Quality/latency/cost measured on fixed test sets",
+  //   ],
+  //   tourNarrative: [
+  //     "Built AI-powered intake tools and an LLM support chatbot.",
+  //     "Hybrid RAG pipeline with tiered models — cost-effective for retrieval, high-quality for synthesis.",
+  //     "Sped up intake, reduced churn, and measured everything on fixed test sets.",
+  //   ],
+  // },
   {
-    title: "Fintech Dashboard",
-    desc: "Real-time trading visualization with WebSocket streaming and D3 charts.",
-    impactBadge: "60% faster",
-    tags: ["React", "D3", "WebSocket"],
-    bullets: ["Sub-100ms streaming updates", "Custom D3 chart library with 12 viz types", "Load time cut from 4.2s to 1.7s"],
+    title: "Tutor Intake Platform",
+    desc: "Cut time-to-enrollment by 50% \u2014 idea to V1 in 12 weeks, led two junior engineers.",
+    impactBadge: "2\u00D7 enrollment speed",
+    tags: ["Next.js", "Node.js", "PostgreSQL", "Redis"],
+    bullets: [
+      "Owned platform from idea \u2192 V1 in ~12 weeks, shipped V2 next quarter",
+      "Built search/filtering across tutor candidates",
+      "Orchestrated outreach (scheduled nudges, SMS webhooks)",
+    ],
     impact: [
-      "40% reduction in analyst workflow time",
-      "50k+ concurrent WebSocket connections",
-      "Sub-100ms p95 latency",
-      "Adopted by 3 enterprise clients in first quarter",
+      "Cut time-to-enrollment by ~50%",
+      "Step-by-step intake wizard shipped in Sales Portal",
+      "Idea to V1 in ~12 weeks, led two junior engineers",
     ],
     tourNarrative: [
-      "A fintech dashboard that reduced analyst workflow time by 40%.",
-      "Built with React, D3, and a real-time WebSocket data layer.",
-      "Handles 50k+ concurrent connections with sub-100ms latency.",
+      "A tutoring intake platform I owned from idea to V1 in ~12 weeks.",
+      "Built search/filtering, outreach orchestration, and a step-by-step intake wizard.",
+      "Cut time-to-enrollment by ~50%. Led two junior engineers and shipped V2 the following quarter.",
     ],
   },
   {
-    title: "E-Commerce Platform",
-    desc: "Full-stack marketplace with Stripe, real-time inventory, and search.",
-    impactBadge: "50k MAU",
-    tags: ["Next.js", "Stripe", "PG"],
-    bullets: ["End-to-end Stripe Connect checkout", "Real-time inventory sync across 3 warehouses", "Typo-tolerant search with faceting"],
-    impact: [
-      "50k monthly active users at peak",
-      "$2M+ annual payment volume via Stripe Connect",
-      "99.9% inventory accuracy across 3 warehouses",
+    title: "Test Pipeline Optimization",
+    desc: "Saved 200+ dev hours/week \u2014 cut a pipeline running thousands of times/day from 20 to 4 min.",
+    impactBadge: "200+ dev hrs/wk saved",
+    tags: ["Node.js", "Docker", "TestContainers"],
+    bullets: [
+      "Cut a heavily used pipeline (thousands of runs/day) from 20 \u2192 4 min with TestContainers",
+      "Removed team reliance on the slow pipeline entirely",
+      "Led reliability improvements via testing-first culture and incident tooling",
     ],
-  },
-  {
-    title: "Dev Tools CLI",
-    desc: "Internal tooling automating deploys and environment provisioning.",
-    impactBadge: "200hrs saved",
-    tags: ["Node", "TS", "AWS"],
-    bullets: ["One-command environment setup", "Auto-rollback deploy pipelines", "Log aggregation across 40+ services"],
     impact: [
-      "15x faster deployments (45 min \u2192 3 min)",
-      "200+ internal users across engineering",
-      "Plugin ecosystem with 18 community extensions",
-      "Featured in company tech blog \u2014 10k views",
+      "Saved 200+ dev hours per week across engineering",
+      "80% pipeline reduction (20 \u2192 4 min, thousands of runs/day)",
+      "Drove testing-first culture that improved overall code quality",
     ],
     tourNarrative: [
-      "A CLI tool for automating cloud infrastructure provisioning.",
-      "Reduced deploy times from 45 min to under 3 min.",
-      "Written in Go with Terraform integration and a plugin system.",
+      "A heavily used CI pipeline (thousands of runs/day) was costing 200+ dev hours a week.",
+      "Cut it from 20 \u2192 4 min with TestContainers, then removed reliance on it entirely.",
+      "Drove a testing-first culture that improved overall code quality.",
     ],
   },
   {
-    title: "Data Pipeline",
-    desc: "ETL system processing 2M+ records/day with quality checks and alerting.",
-    impactBadge: "2M/day",
-    tags: ["Python", "AWS", "Docker"],
-    bullets: ["Self-healing retries with dead-letter queues", "Automated data quality scoring", "Real-time anomaly alerting"],
-    impact: [
-      "2M+ records processed daily with 99.99% uptime",
-      "Self-healing retries reduced manual intervention by 90%",
-      "Anomaly detection catches issues within 30 seconds",
+    title: "AI RAG Chatbot",
+    desc: "Customer-support chatbot from concept to pilot \u2014 reduced MTTR with AI-powered incident tooling.",
+    impactBadge: "concept \u2192 pilot",
+    tags: ["FastAPI", "Python", "PostgreSQL", "Redis", "CloudFormation", "ECS"],
+    bullets: [
+      "Led concept \u2192 pilot for an LLM customer-support RAG chatbot",
+      "Hybrid RAG pipeline with tiered models and A/B-tested prompts",
+      "Self-hosted pgvector on AWS over Pinecone/Chroma for cost + latency",
+      "Deployed on ECS Fargate via CloudFormation with automated CI/CD",
+      "Built AI Slack bot integrating OpenAI + Jira for high-urgency alert triage",
     ],
-  },
-  {
-    title: "Design System",
-    desc: "Tokenized component library adopted across 4 product teams.",
-    impactBadge: "4 teams",
-    tags: ["React", "TS", "Tailwind"],
-    bullets: ["40+ production components", "Figma-to-code pipeline", "Dark/light theming with CSS variables"],
     impact: [
-      "120+ accessible components (WCAG AA)",
-      "60% faster UI development across 12 teams",
-      "Zero visual regressions in 8 months",
-      "97% Storybook coverage",
+      "Reduced MTTR with AI-powered incident triage and context-rich alerts",
+      "Controlled token spend with tiered model strategy",
+      "Prompt guardrails cut hallucinations and kept tone on-brand",
     ],
     tourNarrative: [
-      "A design system powering 12 micro-frontends across the org.",
-      "120+ accessible components with full Storybook documentation.",
-      "Reduced UI development time by 60% and eliminated visual regressions.",
+      "Led an LLM customer-support chatbot from concept to pilot at LotusFlare.",
+      "Hybrid RAG pipeline with tiered models \u2014 cost-effective for retrieval, high-quality for synthesis.",
+      "Built an AI Slack bot for incident triage, reducing MTTR with context-rich alerts.",
     ],
   },
   {
-    title: "Auth Service",
-    desc: "OAuth2 + SSO service handling 100k+ sessions/day.",
-    impactBadge: "100k/day",
-    tags: ["Node", "Redis", "PG"],
-    bullets: ["Multi-provider OAuth2 flows", "Rate limiting + fraud detection", "Session management at scale"],
+    title: "Promotions & Billing Microservice",
+    desc: "1M+ concurrent requests, zero production incidents \u2014 migrated from monolith and load-tested to death.",
+    impactBadge: "0 incidents \u00B7 1M+ req",
+    tags: ["NestJS", "TypeScript", "PostgreSQL", "Kafka", "Redis", "Cassandra", "Kubernetes"],
+    bullets: [
+      "Led monolith \u2192 microservices migration end-to-end",
+      "Built APIs with NestJS/TypeScript, Kafka, Redis, Cassandra, PostgreSQL",
+      "Load-tested and tuned for campaigns serving 1M+ concurrent requests",
+      "Instrumented Grafana, Kibana, and Prometheus dashboards",
+    ],
     impact: [
-      "100k+ sessions managed daily",
-      "Multi-provider OAuth2 with SSO support",
-      "Rate limiting blocked 99.7% of brute-force attempts",
+      "1,000,000+ concurrent requests served reliably across multi-day campaigns",
+      "Zero production incidents",
+      "Tuned Redis/Cassandra access patterns for scale",
+    ],
+    tourNarrative: [
+      "Led a monolith \u2192 microservices migration for a high-throughput promotions and billing service.",
+      "NestJS, Kafka, Redis, Cassandra, Kubernetes \u2014 load-tested to death, zero production incidents.",
+      "Served 1,000,000+ concurrent requests during campaigns with tuned access patterns.",
     ],
   },
+  {
+    title: "IoT Cleaning Monitor",
+    desc: "Extended sensor battery life from weeks to 2 years \u2014 saved a customer $500k/yr in costs.",
+    impactBadge: "$500k/yr saved",
+    tags: ["FastAPI", "React", "AWS IoT", "SQS"],
+    bullets: [
+      "Built full platform: FastAPI backend + React frontend",
+      "Optimized sensor data efficiency, extended battery life, cut transmission costs",
+      "ETL pipeline for sensor data via AWS SQS",
+      "Automated device provisioning with AWS IoT Core",
+      "Managed weekly deployments on AWS",
+    ],
+    impact: [
+      "Saved a customer $500k/yr in operational costs",
+      "Extended sensor battery life from weeks to 2 years, making the product viable",
+    ],
+    tourNarrative: [
+      "First employee at Mero \u2014 built their IoT cleaning monitoring platform from scratch.",
+      "Extended sensor battery life from weeks to 2 years through data efficiency optimization.",
+      "Saved a customer $500k/yr in costs and made the product commercially viable.",
+    ],
+  },
+  // {
+  //   title: "Whisper Transcription Service",
+  //   desc: "OpenAI Whisper-based service turning call audio into structured notes.",
+  //   impactBadge: "automation",
+  //   tags: ["Python", "OpenAI Whisper", "NLP"],
+  //   bullets: [
+  //     "Turned call audio into structured notes for staff intake",
+  //     "Enabled downstream automation workflows",
+  //     "Sped up intake process significantly",
+  //   ],
+  //   impact: [
+  //     "Automated intake from call recordings",
+  //     "Enabled downstream automation pipelines",
+  //     "Reduced manual transcription overhead",
+  //   ],
+  // },
 ]
+
+// ─── Experience ─────────────────────────────────────────────────────
 
 export const EXPERIENCE: Experience[] = [
   {
-    role: "Senior Frontend Dev",
-    company: "TechCorp",
-    year: "2023\u2013now",
-    brief: "Led dashboard rewrite, cutting load time 60%.",
+    role: "Senior Product Engineer",
+    company: "Rigoris Digital",
+    year: "2025\u2013now",
+    brief: "Full stack consulting for startups \u2014 built a tutor intake platform that cut enrollment time by 50%.",
     details: [
-      "Mentored 3 junior devs through code reviews and pair programming",
-      "Built component library adopted across 4 product teams",
+      "Owned tutor intake platform from idea \u2192 V1 in 12 weeks, shipped V2 next quarter",
+      "Led two junior engineers; partnered with Product to scope, iterate, and ship",
+      "Stack: Next.js, React, TypeScript, Tailwind, Node.js, PostgreSQL, Redis",
     ],
   },
   {
-    role: "Full-Stack Developer",
-    company: "StartupXYZ",
-    year: "2021\u20132023",
-    brief: "Built platform from zero to 50k MAU.",
+    role: "Senior Software Engineer",
+    company: "LotusFlare",
+    year: "2021\u20132024",
+    brief: "Full stack \u2014 RAG chatbot, promotions & billing microservice, CI pipeline optimization at telecom scale.",
     details: [
-      "Owned frontend and API layer end-to-end",
-      "Shipped Stripe integration processing $2M+/year",
+      "Led RAG chatbot from concept \u2192 pilot; built AI Slack bot that reduced MTTR",
+      "Led Promotions & Billing monolith \u2192 microservices migration \u2014 1M+ concurrent requests, zero incidents",
+      "Saved 200+ dev hours/week by cutting CI pipeline 80% (20 \u2192 4 min)",
     ],
   },
   {
     role: "Software Engineer",
-    company: "MidCo",
-    year: "2020\u20132021",
-    brief: "Led microservices migration, reduced deploy time 80%.",
+    company: "Mero Technologies",
+    year: "2018\u20132021",
+    brief: "Employee #1 \u2014 full stack, built IoT cleaning monitor platform from scratch.",
     details: [
-      "Built internal developer CLI used by 30+ engineers",
-      "Automated environment provisioning and deployment pipelines",
+      "FastAPI backend, React frontend, AWS IoT Core, SQS-based ETL",
+      "Extended sensor battery life from weeks to 2 years; saved a customer $500k/yr",
     ],
   },
   {
-    role: "Junior Developer",
-    company: "AgencyOne",
-    year: "2019\u20132020",
-    brief: "Shipped 12+ client projects across web and mobile.",
+    role: "Embedded Software Engineer",
+    company: "Escape Games Canada",
+    year: "2017\u20132018",
+    brief: "Remote management system for escape rooms \u2014 React + Flask.",
     details: [
-      "First production React applications and component architecture",
-      "Introduced to AWS infrastructure and CI/CD workflows",
+      "Python/MySQL REST API for real-time prop updates",
+      "Streamlined ops, reducing staff requirements for room management",
+    ],
+  },
+  {
+    role: "Embedded Software Engineer",
+    company: "NeuronicWorks",
+    year: "2015\u20132017",
+    brief: "Lead dev/consultant \u2014 IoT, C, and C++ focused embedded projects.",
+    details: [
+      "Requirements analysis and rapid prototyping for startup clients",
+      "TCP/IP, IoT wireless, bare-metal C and C++ development",
     ],
   },
 ]
 
-export const CONTACT_EMAIL = "hello@example.dev"
+// ─── Contact & Social ───────────────────────────────────────────────
+
+export const CONTACT_EMAIL = "ishan.sharma@torontomu.ca"
 
 export const SOCIAL_LINKS: SocialLink[] = [
-  { label: "GitHub", href: "#" },
-  { label: "LinkedIn", href: "#" },
-  { label: "Resume", href: "#" },
+  { label: "GitHub", href: "https://github.com/ishan1225" },
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/i-sharma/" },
+  { label: "Resume", href: "#" },  // TODO: Stage 8 — host resume PDF and link here
 ]
 
 export const LOCATION = "Toronto, ON \u00B7 Remote friendly"
 
+// ─── Tour Sections ──────────────────────────────────────────────────
+
 export const ABOUT_TOUR: TourSection = {
   narrative: [
-    "Hi \u2014 I'm a full-stack engineer with 6+ years shipping products at scale.",
-    "I specialize in React, TypeScript, and cloud-native architecture.",
-    "Currently focused on developer tooling and design systems.",
+    "Hi \u2014 I'm Ishan. Full-stack engineer, 10+ years across IoT, telecom, and AI.",
+    "I love building high-quality software on high-impact teams.",
+    "B.Eng. Electrical Engineering from Ryerson. Currently at Rigoris Digital.",
   ],
   impact: [
-    "6+ years across startups and scale-ups",
-    "Led frontend architecture for 3 product teams",
-    "Open-source contributor \u2014 1.2k GitHub stars",
+    "10+ years across startups and scale-ups",
+    "Led AI/ML integrations (RAG, Whisper, OpenAI) in production",
+    "Employee #1 at a startup, senior IC at a telecom-scale company",
   ],
 }
 
@@ -204,7 +284,7 @@ export const CONTACT_TOUR: TourSection = {
   ],
   impact: [
     "Open to full-time and contract roles",
-    "Available for consulting on React architecture",
-    "Happy to chat about open-source collaboration",
+    "Interested in AI/ML, developer tooling, and product engineering",
+    "Toronto-based, remote friendly",
   ],
 }

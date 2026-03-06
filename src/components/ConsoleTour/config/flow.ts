@@ -55,9 +55,9 @@ export const NAV_TIP = 'tip: tabs, Continue ▸, and commands — all three work
  */
 export const TOUR_STEPS: TourStepConfig[] = [
   { type: 'about' },
-  { type: 'project', index: 0 },  // Fintech Dashboard
-  { type: 'project', index: 2 },  // Dev Tools CLI
-  { type: 'project', index: 4 },  // Design System
+  { type: 'project', index: 0 },  // Tutor Intake Platform
+  { type: 'project', index: 1 },  // Test Pipeline Optimization
+  { type: 'project', index: 2 },  // AI RAG Chatbot
   { type: 'contact' },
 ]
 
