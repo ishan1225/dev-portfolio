@@ -13,6 +13,7 @@ import { TerminalInput } from './TerminalInput'
 import { TerminalFooter } from './TerminalFooter'
 import { OnboardingOverlay } from './OnboardingOverlay'
 import { MatrixDonutRenderer } from './MatrixDonutRenderer'
+import { GameRenderer } from './GameRenderer'
 import { bootStory } from './data/bootStory'
 import { CONTACT_EMAIL, resolveStepArg } from './data/steps'
 import { TIMING } from './constants'
@@ -30,11 +31,9 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
   const { phase, termCtrl, backdropCtrl, isActive, isFullyOpen, isClosingVisual } =
     useTerminalAnimation(isOpen)
 
-  // DEV: skip boot and go straight to matrix mode for debugging
-  const DEV_SKIP_TO_MATRIX = true
-  const bootResult = useBootSequence(DEV_SKIP_TO_MATRIX ? false : isFullyOpen)
-  const isBooting = DEV_SKIP_TO_MATRIX ? false : bootResult.isBooting
-  const progress = DEV_SKIP_TO_MATRIX ? 1 : bootResult.progress
+  const bootResult = useBootSequence(isFullyOpen)
+  const isBooting = bootResult.isBooting
+  const progress = bootResult.progress
   const { execute } = useCommands()
   const { push: historyPush, up: historyUp, down: historyDown, reset: historyReset } = useCommandHistory()
 
@@ -52,6 +51,7 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
   // Tutorial state: null=inactive, 0=continue, 1=tab+enter, 2=click-about, 3=farewell
   const [tutorialStep, setTutorialStep] = useState<number | null>(null)
   const [matrixMode, setMatrixMode] = useState(false)
+  const [gameMode, setGameMode] = useState(false)
   const tutorialStartedRef = useRef(false)
   const pendingNavRef = useRef<number | null>(null)
 
@@ -59,13 +59,6 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
   useEffect(() => {
     if (isFullyOpen && !bootEnqueuedRef.current) {
       bootEnqueuedRef.current = true
-      if (DEV_SKIP_TO_MATRIX) {
-        // Skip boot + tutorial, go straight to matrix
-        handleEasterEgg('secret')
-        setMatrixMode(true)
-        tutorialStartedRef.current = true // prevent tutorial from starting
-        return
-      }
       const lines: DisplayLine[] = bootStory.map((entry, i) => ({
         id: `boot-${i}`,
         type: entry.type,
@@ -135,16 +128,17 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       tutorialStartedRef.current = false
       pendingNavRef.current = null
       setMatrixMode(false)
+      setGameMode(false)
     }
   }, [isActive, queue.clear, historyReset, tourReset])
 
-  // ESC always closes
+  // ESC closes terminal (unless game is active — GameRenderer handles ESC internally)
   useEffect(() => {
     if (!isActive) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [isActive, onClose])
+  }, [isActive, onClose, gameMode])
 
   // Handle tab click → navigate to step directly
   const handleTabClick = useCallback((stepIndex: number) => {
@@ -159,7 +153,25 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       return
     }
 
-    // Normal tab click
+    // Bonus tab: Donut (index === totalSteps)
+    if (stepIndex === totalSteps) {
+      setGameMode(false)
+      setMatrixMode(true)
+      queue.clear()
+      return
+    }
+
+    // Bonus tab: Robo Hop (index === totalSteps + 1)
+    if (stepIndex === totalSteps + 1) {
+      setMatrixMode(false)
+      setGameMode(true)
+      queue.clear()
+      return
+    }
+
+    // Regular tab — dismiss game/matrix mode
+    setGameMode(false)
+    setMatrixMode(false)
     setHasInteracted(true)
     const lines = navigateToStep(stepIndex)
     queue.clear()
@@ -213,16 +225,19 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
       setMatrixMode(false)
     }
 
-    if (trimmed === 'fun') {
-      const lines = handleEasterEgg('fun')
+    if (trimmed === 'fun' || trimmed === 'game' || trimmed === 'play') {
+      handleEasterEgg('fun')
+      if (matrixMode) setMatrixMode(false)
+      setGameMode(true)
       queue.clear()
-      queue.enqueue([echo, ...lines], 'stagger')
       return
     }
 
     // Check if command maps to a tour step
     const stepIdx = resolveStepArg(trimmed)
     if (stepIdx >= 0) {
+      setGameMode(false)
+      setMatrixMode(false)
       const lines = navigateToStep(stepIdx)
       queue.clear()
       queue.enqueue([echo, ...lines], 'stagger')
@@ -269,6 +284,15 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     handleInput(ghostHint)
   }
 
+  // Handle game quit → show score, return to terminal
+  const handleGameQuit = useCallback((score: number) => {
+    setGameMode(false)
+    const sec = Math.floor((score / 10) % 60)
+    const min = Math.floor(score / 10 / 60)
+    const timeStr = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+    queue.enqueue([{ id: uid(), type: 'system', text: `game over — uptime: ${timeStr}` }], 'stagger')
+  }, [queue.enqueue])
+
   // Derive display values — tutorial overrides
   const inTutorial = tutorialStep !== null && tutorialStep < 3
   const shouldPulse = tourEnabled && !hasInteracted && tutorialStep === null
@@ -285,11 +309,13 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
     ? progress * (BOOT_WEIGHT / totalSegments)
     : inTutorial
       ? (BOOT_WEIGHT + tutorialStep!) / totalSegments
-      : atEasterEgg || isComplete
+      : easterEggPhase === 'done' || isComplete
         ? 1
-        : currentStep >= 0
-          ? (BOOT_WEIGHT + INTRO_STEPS + currentStep + 1) / totalSegments
-          : (BOOT_WEIGHT + INTRO_STEPS) / totalSegments
+        : easterEggPhase === 'secret'
+          ? (BOOT_WEIGHT + INTRO_STEPS + visibleTotal - 1) / totalSegments
+          : currentStep >= 0
+            ? (BOOT_WEIGHT + INTRO_STEPS + currentStep + 1) / totalSegments
+            : (BOOT_WEIGHT + INTRO_STEPS) / totalSegments
 
   // Simple phase labels — no numbers, progress bar tells the story
   const progressLabel = isBooting
@@ -350,14 +376,14 @@ export function ConsoleTour({ isOpen, onClose }: Props) {
                 onTabClick={handleTabClick}
                 onPlayClick={handlePlayClick}
               />
-              {matrixMode ? <MatrixDonutRenderer /> : <TerminalBody lines={queue.displayLines} />}
+              {gameMode ? <GameRenderer onQuit={handleGameQuit} /> : matrixMode ? <MatrixDonutRenderer /> : <TerminalBody lines={queue.displayLines} />}
               <TerminalInput
                 isBooting={isBooting}
                 hint={effectiveGhostHint}
                 onSubmit={handleInput}
                 shouldFocus={isFullyOpen && tutorialStep !== 0 && tutorialStep !== 2}
                 shouldPulse={shouldPulse}
-                disabled={tutorialStep === 0 || tutorialStep === 2}
+                disabled={gameMode || tutorialStep === 0 || tutorialStep === 2}
                 onArrowUp={historyUp}
                 onArrowDown={historyDown}
                 onTabFill={() => { if (matrixMode) setMatrixMode(false) }}

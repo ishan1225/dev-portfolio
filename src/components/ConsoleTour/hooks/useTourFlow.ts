@@ -18,8 +18,10 @@ export function useTourFlow(enabled: boolean) {
     bootEndTimeRef.current = Date.now()
   }
 
-  // Total visible steps: base steps + 1 if easter egg revealed
-  const visibleTotal = easterEggRevealed ? TOTAL_STEPS + 1 : TOTAL_STEPS
+  // Total visible steps: base + first bonus (??→Donut) + second bonus (??→Robo Hop)
+  const bonus1 = easterEggRevealed ? 1 : 0
+  const bonus2 = easterEggPhase === 'secret' || easterEggPhase === 'done' ? 1 : 0
+  const visibleTotal = TOTAL_STEPS + bonus1 + bonus2
 
   // Navigate to a config step (0-based index into STEPS)
   const navigateToStep = useCallback((index: number): DisplayLine[] => {
@@ -54,18 +56,8 @@ export function useTourFlow(enabled: boolean) {
     if (command === 'fun') {
       setEasterEggPhase('done')
       setIsComplete(true)
-      const elapsed = bootEndTimeRef.current ? Date.now() - bootEndTimeRef.current : 0
-      const minutes = Math.floor(elapsed / 60000)
-      const seconds = Math.floor((elapsed % 60000) / 1000)
-      const timeStr = `${minutes}:${String(seconds).padStart(2, '0')}`
-      return [
-        { id: uid(), type: 'header', text: '── ??? ──' },
-        { id: uid(), type: 'system', text: 'initializing...' },
-        { id: uid(), type: 'content', text: 'game coming soon.' },
-        { id: uid(), type: 'content', text: '' },
-        { id: uid(), type: 'system', text: `✓ tour complete — ${timeStr}` },
-        { id: uid(), type: 'content', text: 'thanks for exploring.' },
-      ]
+      // Game renderer handles display — return empty
+      return []
     }
 
     return []
