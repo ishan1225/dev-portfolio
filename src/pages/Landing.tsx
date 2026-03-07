@@ -454,15 +454,6 @@ export function Landing() {
         </motion.p>
       </RevealSection>
 
-      {/* ═══ Mobile sticky bottom bar ═══ */}
-      <div className="fixed bottom-0 inset-x-0 px-3 pb-2 sm:hidden z-50">
-        <div className="flex justify-around px-3 py-2.5 bg-void/92 backdrop-blur border border-deep-teal rounded-xl">
-          {['email', 'github', 'linkedin', 'resume'].map((l) => (
-            <span key={l} className="text-xs text-cyan tracking-[1.5px] cursor-pointer">{l}</span>
-          ))}
-        </div>
-      </div>
-
       <ConsoleTour isOpen={isOpen} onClose={handleClose} />
     </div>
   )
