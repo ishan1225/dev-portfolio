@@ -443,7 +443,12 @@ export function Landing() {
 
         <motion.div variants={fadeUp} transition={{ duration: 0.5 }} className="flex gap-5 sm:gap-6 justify-center mt-5 sm:mt-6">
           {SOCIAL_LINKS.map((l) => (
-            <a key={l.label} href={l.href} className="text-xs sm:text-sm text-warm-gray cursor-pointer hover:text-silver transition-colors">
+            <a
+              key={l.label}
+              href={l.href}
+              {...(l.href.endsWith('.pdf') ? { download: true } : { target: '_blank', rel: 'noopener noreferrer' })}
+              className="text-xs sm:text-sm text-warm-gray cursor-pointer hover:text-silver transition-colors"
+            >
               {l.label}
             </a>
           ))}

@@ -256,7 +256,7 @@ export const CONTACT_EMAIL = "ishan.sharma@torontomu.ca"
 export const SOCIAL_LINKS: SocialLink[] = [
   { label: "GitHub", href: "https://github.com/ishan1225" },
   { label: "LinkedIn", href: "https://www.linkedin.com/in/i-sharma/" },
-  { label: "Resume", href: "#" },  // TODO: Stage 8 — host resume PDF and link here
+  { label: "Resume", href: "/resume.pdf" },
 ]
 
 export const LOCATION = "Toronto, ON \u00B7 Remote friendly"
