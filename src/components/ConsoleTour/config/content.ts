@@ -88,21 +88,21 @@ export const PROJECTS: Project[] = [
   },
   {
     title: "Test Pipeline Optimization",
-    desc: "Saved 200+ dev hours/week \u2014 cut a pipeline running thousands of times/day from 20 to 4 min.",
+    desc: "Saved 200+ dev hours/week \u2014 cut a pipeline running hundreds of times/day from 20 to 4 min.",
     impactBadge: "200+ dev hrs/wk saved",
     tags: ["Node.js", "Docker", "TestContainers"],
     bullets: [
-      "Cut a heavily used pipeline (thousands of runs/day) from 20 \u2192 4 min with TestContainers",
+      "Cut a heavily used pipeline (hundreds of runs/day) from 20 \u2192 4 min with TestContainers",
       "Removed team reliance on the slow pipeline entirely",
       "Led reliability improvements via testing-first culture and incident tooling",
     ],
     impact: [
       "Saved 200+ dev hours per week across engineering",
-      "80% pipeline reduction (20 \u2192 4 min, thousands of runs/day)",
+      "80% pipeline reduction (20 \u2192 4 min, hundreds of runs/day)",
       "Drove testing-first culture that improved overall code quality",
     ],
     tourNarrative: [
-      "A heavily used CI pipeline (thousands of runs/day) was costing 200+ dev hours a week.",
+      "A heavily used CI pipeline (hundreds of runs/day) was costing 200+ dev hours a week.",
       "Cut it from 20 \u2192 4 min with TestContainers, then removed reliance on it entirely.",
       "Drove a testing-first culture that improved overall code quality.",
     ],
@@ -229,7 +229,7 @@ export const EXPERIENCE: Experience[] = [
   },
   {
     role: "Embedded Software Engineer",
-    company: "Escape Games Canada",
+    company: "VS Entertainment",
     year: "2017\u20132018",
     brief: "Remote management system for escape rooms \u2014 React + Flask.",
     details: [
