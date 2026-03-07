@@ -122,7 +122,7 @@ export function Landing() {
   const [showAllProjects, setShowAllProjects] = useState(false)
 
   function handleCopyEmail() {
-    navigator.clipboard.writeText(CONTACT_EMAIL).catch(() => {})
+    navigator.clipboard.writeText(CONTACT_EMAIL).catch(() => { })
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -169,7 +169,7 @@ export function Landing() {
             className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-matrix-green"
             style={{ boxShadow: `0 0 6px ${C.matrixGreen}60` }}
           />
-          <span className="text-[10px] sm:text-xs text-warm-gray tracking-[1.5px]">AVAILABLE</span>
+          <span className="text-[10px] sm:text-xs text-warm-gray tracking-[1.5px]">ONLINE</span>
         </motion.div>
 
         <motion.button
