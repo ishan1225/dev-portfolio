@@ -480,17 +480,22 @@ Final command list (8 commands):
 - [ ] Replace stage 5 placeholders with real implementations
 
 ### Stage 7: Polish
-- [ ] Responsive cleanup (mobile ≥320px, tablet, desktop)
-- [ ] Accessibility: focus management, aria labels, reduced-motion support
-- [ ] Performance optimization
-- [ ] Animation timing fine-tuning
-- [ ] Cross-browser testing
-- [ ] Skip tutorial on return: persist `tutorialCompleted` to localStorage, skip the interactive intro for returning visitors (still show on first visit or when storage cleared)
+- [x] Make matrix donut font responsive (clamp like game font)
+- [x] React.memo on TerminalLine and TerminalBody
+- [x] Skip tutorial on return: persist `tutorialCompleted` to localStorage, skip the interactive intro for returning visitors
+- [x] Wire in real portfolio data, SEO meta, favicon, headshot
+- [x] Remove unused reference files
 
-### Stage 8: Post-V1 Deploy
+### Stage 8: Post-V1
 - [ ] **Update resume to match website content and host as downloadable PDF** (highest priority)
 - [ ] Add GitHub/Demo links per project card in Featured Work (currently commented out in Landing.tsx)
 - [ ] Wire real Resume URL into social links once PDF is hosted (GitHub + LinkedIn already wired)
+- [ ] Modal accessibility (focus trap, aria-labels, role)
+- [ ] Mobile fallback for ConsoleTour
+- [ ] Increase touch targets on tabs to 44px minimum
+- [ ] Reuse game grid buffers instead of allocating per frame
+- [ ] Cross-browser testing
+- [ ] Animation timing fine-tuning
 
 ## Suggested File Structure
 ```
