@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "deploy": "npm run build && aws s3 sync dist/ s3://ishan.fyi --delete --profile ishan-site && aws cloudfront create-invalidation --distribution-id E3ZMY97XX63QJ --paths '/*' --profile ishan-site",
     "lint": "eslint .",
     "preview": "vite preview"
   },
