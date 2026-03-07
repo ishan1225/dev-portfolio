@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { LineType } from './types'
 
 interface LineConfig {
@@ -20,7 +21,7 @@ interface Props {
   showCursor?: boolean
 }
 
-export function TerminalLine({ type, text, showCursor }: Props) {
+export const TerminalLine = memo(function TerminalLine({ type, text, showCursor }: Props) {
   const cfg = LINE_CONFIG[type]
 
   return (
@@ -34,4 +35,4 @@ export function TerminalLine({ type, text, showCursor }: Props) {
       </span>
     </div>
   )
-}
+})

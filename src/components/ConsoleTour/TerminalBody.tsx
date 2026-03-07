@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { memo, useEffect, useRef, type ReactNode } from 'react'
 import { TerminalLine } from './TerminalLine'
 import type { DisplayLine } from './types'
 
@@ -7,7 +7,7 @@ interface Props {
   children?: ReactNode
 }
 
-export function TerminalBody({ lines, children }: Props) {
+export const TerminalBody = memo(function TerminalBody({ lines, children }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -28,4 +28,4 @@ export function TerminalBody({ lines, children }: Props) {
       <div ref={bottomRef} />
     </div>
   )
-}
+})

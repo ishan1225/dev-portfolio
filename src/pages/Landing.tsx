@@ -122,7 +122,7 @@ export function Landing() {
   const [showAllProjects, setShowAllProjects] = useState(false)
 
   function handleCopyEmail() {
-    navigator.clipboard.writeText(CONTACT_EMAIL).catch(() => {})
+    navigator.clipboard.writeText(CONTACT_EMAIL).catch(() => { })
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -132,15 +132,14 @@ export function Landing() {
 
       {/* ═══ Hero ═══ */}
       <div className="min-h-screen flex flex-col items-center justify-center gap-3 sm:gap-4 px-6">
-        <motion.div
+        <motion.img
+          src="/headshot.webp"
+          alt="Ishan Sharma"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6 }}
-          className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-deep-teal flex items-center justify-center text-xs text-warm-gray"
-          style={{ background: `linear-gradient(135deg, ${C.deepSpace}, ${C.deepTeal}40)` }}
-        >
-          avatar
-        </motion.div>
+          className="w-48 h-48 sm:w-64 sm:h-64 rounded-full border-2 border-deep-teal object-cover"
+        />
 
         <motion.h1
           initial={{ opacity: 0 }}
@@ -148,7 +147,7 @@ export function Landing() {
           transition={{ delay: 0.2, duration: 0.6 }}
           className="text-xl sm:text-3xl text-mint-glow font-bold tracking-[4px]"
         >
-          YOUR NAME
+          ISHAN SHARMA
         </motion.h1>
 
         <motion.p
@@ -157,7 +156,7 @@ export function Landing() {
           transition={{ delay: 0.35, duration: 0.6 }}
           className="text-xs sm:text-sm text-warm-gray tracking-[2px] sm:tracking-[3px]"
         >
-          FULL-STACK DEVELOPER &middot; 5+ YEARS
+          ENGINEER &middot; BUILDER &middot; 10+ YEARS
         </motion.p>
 
         <motion.div
@@ -170,7 +169,7 @@ export function Landing() {
             className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-matrix-green"
             style={{ boxShadow: `0 0 6px ${C.matrixGreen}60` }}
           />
-          <span className="text-[10px] sm:text-xs text-warm-gray tracking-[1.5px]">AVAILABLE</span>
+          <span className="text-[10px] sm:text-xs text-warm-gray tracking-[1.5px]">ONLINE</span>
         </motion.div>
 
         <motion.button
@@ -198,20 +197,19 @@ export function Landing() {
       <Divider />
 
       {/* ═══ About ═══ */}
-      <RevealSection className="px-6 sm:px-8 py-16 sm:py-24 max-w-xl mx-auto">
+      <RevealSection className="px-6 sm:px-8 py-16 sm:py-24 max-w-2xl mx-auto">
         <motion.div variants={fadeUp} transition={{ duration: 0.5 }}>
           <SectionHeader label="ABOUT" />
         </motion.div>
         <motion.p variants={fadeUp} transition={{ duration: 0.5 }} className="text-sm sm:text-base text-silver leading-relaxed">
-          I build performant web applications and developer tools. Focused on React ecosystems,
-          cloud infrastructure, and clean architecture.
+          Full-stack engineer with 10+ years across IoT, telecom, and AI. I love building high-quality software on high-impact teams — from employee #1 at a startup to senior IC at scale.
         </motion.p>
       </RevealSection>
 
       <Divider />
 
       {/* ═══ Skills ═══ */}
-      <RevealSection className="px-6 sm:px-8 py-16 sm:py-24 max-w-xl mx-auto">
+      <RevealSection className="px-6 sm:px-8 py-16 sm:py-24 max-w-2xl mx-auto">
         <motion.div variants={fadeUp} transition={{ duration: 0.5 }}>
           <SectionHeader label="SKILLS" />
         </motion.div>
@@ -234,7 +232,7 @@ export function Landing() {
       <Divider />
 
       {/* ═══ Featured Work ═══ */}
-      <RevealSection className="px-6 sm:px-8 py-16 sm:py-24 max-w-xl mx-auto">
+      <RevealSection className="px-6 sm:px-8 py-16 sm:py-24 max-w-2xl mx-auto">
         <motion.div variants={fadeUp} transition={{ duration: 0.5 }}>
           <SectionHeader label="FEATURED WORK" count={PROJECTS.length} />
         </motion.div>
@@ -309,14 +307,7 @@ export function Landing() {
                           </div>
                         )}
 
-                        <div className="flex gap-3 mt-4">
-                          <a onClick={(e) => e.stopPropagation()} href="#" className="px-4 py-1.5 rounded-md border border-matrix-green/35 text-xs sm:text-sm text-matrix-green font-semibold tracking-[1px] hover:bg-matrix-green/15 hover:border-matrix-green/60 transition-all duration-200">
-                            GitHub &#x2192;
-                          </a>
-                          <a onClick={(e) => e.stopPropagation()} href="#" className="px-4 py-1.5 rounded-md border border-matrix-green/35 text-xs sm:text-sm text-matrix-green font-semibold tracking-[1px] hover:bg-matrix-green/15 hover:border-matrix-green/60 transition-all duration-200">
-                            Demo &#x2192;
-                          </a>
-                        </div>
+                        {/* TODO: Stage 8 — add GitHub/Demo links per project after V1 deploy */}
                       </div>
                     </motion.div>
                   )}
@@ -360,7 +351,7 @@ export function Landing() {
       <Divider />
 
       {/* ═══ Experience ═══ */}
-      <RevealSection className="px-6 sm:px-8 py-16 sm:py-24 max-w-xl mx-auto">
+      <RevealSection className="px-6 sm:px-8 py-16 sm:py-24 max-w-2xl mx-auto">
         <motion.div variants={fadeUp} transition={{ duration: 0.5 }}>
           <SectionHeader label="EXPERIENCE" />
         </motion.div>
@@ -462,15 +453,6 @@ export function Landing() {
           {LOCATION}
         </motion.p>
       </RevealSection>
-
-      {/* ═══ Mobile sticky bottom bar ═══ */}
-      <div className="fixed bottom-0 inset-x-0 px-3 pb-2 sm:hidden z-50">
-        <div className="flex justify-around px-3 py-2.5 bg-void/92 backdrop-blur border border-deep-teal rounded-xl">
-          {['email', 'github', 'linkedin', 'resume'].map((l) => (
-            <span key={l} className="text-xs text-cyan tracking-[1.5px] cursor-pointer">{l}</span>
-          ))}
-        </div>
-      </div>
 
       <ConsoleTour isOpen={isOpen} onClose={handleClose} />
     </div>
