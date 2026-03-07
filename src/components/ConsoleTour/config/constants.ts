@@ -42,8 +42,8 @@ export const PROGRESS = {
 export const FONT_SIZES = {
   gameFontSize:       'clamp(10px, 1.4vw, 16px)',
   gameLineHeight:     'clamp(13px, 1.75vw, 20px)',
-  matrixFontSize:     '12px',
-  matrixLineHeight:   '1.15',
+  matrixFontSize:     'clamp(8px, 1.1vw, 12px)',
+  matrixLineHeight:   'clamp(10px, 1.3vw, 14px)',
 } as const
 
 export const SIZES = {
