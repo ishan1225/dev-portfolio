@@ -487,9 +487,10 @@ Final command list (8 commands):
 - [x] Remove unused reference files
 
 ### Stage 8: Post-V1
-- [ ] **Update resume to match website content and host as downloadable PDF** (highest priority)
+- [x] ~~Update resume to match website content and host as downloadable PDF~~
+- [x] ~~Wire real Resume URL into social links once PDF is hosted~~
+- [ ] **Make resume download more accessible/prominent** (high priority — currently only at bottom in Contact)
 - [ ] Add GitHub/Demo links per project card in Featured Work (currently commented out in Landing.tsx)
-- [ ] Wire real Resume URL into social links once PDF is hosted (GitHub + LinkedIn already wired)
 - [ ] Modal accessibility (focus trap, aria-labels, role)
 - [ ] Mobile fallback for ConsoleTour
 - [ ] Increase touch targets on tabs to 44px minimum
